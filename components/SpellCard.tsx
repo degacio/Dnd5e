@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Spell, SchoolColors } from '@/types/spell';
-import { Sparkles, Clock, Target, Zap, Timer } from 'lucide-react-native';
+import { Sparkles, ChevronRight } from 'lucide-react-native';
 
 interface SpellCardProps {
   spell: Spell;
@@ -15,51 +15,32 @@ export function SpellCard({ spell, onPress }: SpellCardProps) {
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
       <View style={[styles.header, { backgroundColor: schoolColor }]}>
         <View style={styles.titleRow}>
-          <Sparkles size={20} color="#FFFFFF" />
+          <Sparkles size={18} color="#FFFFFF" />
           <Text style={styles.spellName}>{spell.name}</Text>
           <View style={styles.levelBadge}>
             <Text style={styles.levelText}>{spell.level}º</Text>
           </View>
         </View>
-        <Text style={styles.schoolText}>{spell.school}</Text>
       </View>
 
       <View style={styles.content}>
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Clock size={16} color="#666" />
-            <Text style={styles.statLabel}>Tempo</Text>
-            <Text style={styles.statValue}>{spell.castingTime}</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Target size={16} color="#666" />
-            <Text style={styles.statLabel}>Alcance</Text>
-            <Text style={styles.statValue}>{spell.range}</Text>
-          </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.schoolText}>{spell.school}</Text>
+          <Text style={styles.separator}>•</Text>
+          <Text style={styles.castingTimeText}>{spell.castingTime}</Text>
+          <Text style={styles.separator}>•</Text>
+          <Text style={styles.rangeText}>{spell.range}</Text>
         </View>
 
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Zap size={16} color="#666" />
-            <Text style={styles.statLabel}>Componentes</Text>
-            <Text style={styles.statValue}>{spell.components}</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Timer size={16} color="#666" />
-            <Text style={styles.statLabel}>Duração</Text>
-            <Text style={styles.statValue}>{spell.duration}</Text>
-          </View>
-        </View>
-
-        <Text style={styles.description} numberOfLines={3}>
+        <Text style={styles.description} numberOfLines={2}>
           {spell.description}
         </Text>
 
         <View style={styles.footer}>
-          <Text style={styles.classes}>
-            Classes: {spell.classes.join(', ')}
+          <Text style={styles.classes} numberOfLines={1}>
+            {spell.classes.join(', ')}
           </Text>
-          <Text style={styles.source}>{spell.source}</Text>
+          <ChevronRight size={16} color="#666" />
         </View>
       </View>
     </TouchableOpacity>
@@ -70,26 +51,26 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    marginVertical: 6,
+    marginVertical: 4,
     marginHorizontal: 16,
-    elevation: 3,
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 2,
   },
   header: {
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
-    padding: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
   },
   spellName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
     marginLeft: 8,
@@ -97,62 +78,59 @@ const styles = StyleSheet.create({
   },
   levelBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 12,
-    paddingHorizontal: 8,
+    borderRadius: 10,
+    paddingHorizontal: 6,
     paddingVertical: 2,
   },
   levelText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#FFFFFF',
-  },
-  schoolText: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '500',
   },
   content: {
     padding: 16,
   },
-  statsRow: {
+  infoRow: {
     flexDirection: 'row',
-    marginBottom: 12,
-  },
-  statItem: {
-    flex: 1,
     alignItems: 'center',
+    marginBottom: 8,
   },
-  statLabel: {
+  schoolText: {
     fontSize: 12,
     color: '#666',
-    marginTop: 4,
-    marginBottom: 2,
-  },
-  statValue: {
-    fontSize: 11,
-    color: '#333',
-    textAlign: 'center',
     fontWeight: '500',
   },
+  separator: {
+    fontSize: 12,
+    color: '#999',
+    marginHorizontal: 6,
+  },
+  castingTimeText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  rangeText: {
+    fontSize: 12,
+    color: '#666',
+  },
   description: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#444',
-    lineHeight: 20,
+    lineHeight: 18,
     marginBottom: 12,
   },
   footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
-    paddingTop: 12,
+    borderTopColor: '#F0F0F0',
+    paddingTop: 8,
   },
   classes: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  source: {
     fontSize: 11,
-    color: '#999',
-    fontStyle: 'italic',
+    color: '#666',
+    flex: 1,
+    fontWeight: '500',
   },
 });

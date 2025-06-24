@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { BookOpen, Dice6, Shield, Sword, Users } from 'lucide-react-native';
+import { BookOpen, Dice6, Shield, Sword, Users, Settings } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -63,6 +63,15 @@ export default function TabLayout() {
           title: 'Combate',
           tabBarIcon: ({ size, color }) => (
             <Sword size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Configurações',
+          tabBarIcon: ({ size, color }) => (
+            <Settings size={size} color={color} />
           ),
         }}
       />
