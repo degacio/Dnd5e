@@ -50,7 +50,7 @@
       {
       "level": 4,
         "name": "Aumento no Valor de Atributo",
-        "descritpion": "Quando você atinge o 4º nível, e novamente no 8º, 12º, 16º e 19º níveis, você pode aumentar um atributo de sua escolha em 2 pontos, ou você pode aumentar dois atributos de sua escolha em 1 ponto cada. Como de costume, você não pode aumentar um atributo acima de 20 usando esse recurso."
+        "description": "Quando você atinge o 4º nível, e novamente no 8º, 12º, 16º e 19º níveis, você pode aumentar um atributo de sua escolha em 2 pontos, ou você pode aumentar dois atributos de sua escolha em 1 ponto cada. Como de costume, você não pode aumentar um atributo acima de 20 usando esse recurso."
       },
       
       {
