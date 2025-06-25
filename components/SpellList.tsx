@@ -10,7 +10,7 @@ import {
 import { Spell, School, SchoolColors } from '@/types/spell';
 import { SpellCard } from './SpellCard';
 import { SpellDetailModal } from './SpellDetailModal';
-import { Search, Filter } from 'lucide-react-native';
+import { Search, Filter, X } from 'lucide-react-native';
 
 interface SpellListProps {
   spells: Spell[];
@@ -20,15 +20,17 @@ export function SpellList({ spells }: SpellListProps) {
   const [selectedSpell, setSelectedSpell] = useState<Spell | null>(null);
   const [searchText, setSearchText] = useState('');
   const [selectedSchool, setSelectedSchool] = useState<string | null>(null);
+  const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
 
   const filteredSpells = useMemo(() => {
     return spells.filter((spell) => {
       const matchesSearch = spell.name.toLowerCase().includes(searchText.toLowerCase());
       const matchesSchool = !selectedSchool || spell.school === selectedSchool;
+      const matchesLevel = selectedLevel === null || spell.level === selectedLevel;
       
-      return matchesSearch && matchesSchool;
+      return matchesSearch && matchesSchool && matchesLevel;
     });
-  }, [spells, searchText, selectedSchool]);
+  }, [spells, searchText, selectedSchool, selectedLevel]);
 
   const groupedSpells = useMemo(() => {
     const groups: Record<string, Spell[]> = {};
@@ -59,6 +61,15 @@ export function SpellList({ spells }: SpellListProps) {
   }, [filteredSpells]);
 
   const schools = Object.values(School);
+  const levels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+  const clearFilters = () => {
+    setSearchText('');
+    setSelectedSchool(null);
+    setSelectedLevel(null);
+  };
+
+  const hasActiveFilters = searchText || selectedSchool || selectedLevel !== null;
 
   return (
     <View style={styles.container}>
@@ -71,83 +82,152 @@ export function SpellList({ spells }: SpellListProps) {
             value={searchText}
             onChangeText={setSearchText}
           />
+          {searchText ? (
+            <TouchableOpacity onPress={() => setSearchText('')}>
+              <X size={18} color="#666" />
+            </TouchableOpacity>
+          ) : null}
         </View>
       </View>
 
       <View style={styles.filtersContainer}>
         <View style={styles.filterSection}>
-          <Text style={styles.filterLabel}>Escola:</Text>
-          <View style={styles.filterButtons}>
-            <TouchableOpacity
-              style={[
-                styles.filterButton,
-                !selectedSchool && styles.filterButtonActive,
-              ]}
-              onPress={() => setSelectedSchool(null)}
-            >
-              <Text
-                style={[
-                  styles.filterButtonText,
-                  !selectedSchool && styles.filterButtonTextActive,
-                ]}
+          <View style={styles.filterHeader}>
+            <Text style={styles.filterLabel}>Filtros:</Text>
+            {hasActiveFilters && (
+              <TouchableOpacity 
+                style={styles.clearFiltersButton} 
+                onPress={clearFilters}
               >
-                Todas
-              </Text>
-            </TouchableOpacity>
-            {schools.map((school) => (
+                <Text style={styles.clearFiltersText}>Limpar filtros</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          <View style={styles.filterRow}>
+            <Text style={styles.filterSubLabel}>Escola:</Text>
+            <View style={styles.filterButtons}>
               <TouchableOpacity
-                key={school}
                 style={[
                   styles.filterButton,
-                  selectedSchool === school && styles.filterButtonActive,
-                  selectedSchool === school && {
-                    backgroundColor: SchoolColors[school],
-                  },
+                  !selectedSchool && styles.filterButtonActive,
                 ]}
-                onPress={() =>
-                  setSelectedSchool(selectedSchool === school ? null : school)
-                }
+                onPress={() => setSelectedSchool(null)}
               >
                 <Text
                   style={[
                     styles.filterButtonText,
-                    selectedSchool === school && styles.filterButtonTextActive,
+                    !selectedSchool && styles.filterButtonTextActive,
                   ]}
                 >
-                  {school}
+                  Todas
                 </Text>
               </TouchableOpacity>
-            ))}
+              {schools.map((school) => (
+                <TouchableOpacity
+                  key={school}
+                  style={[
+                    styles.filterButton,
+                    selectedSchool === school && styles.filterButtonActive,
+                    selectedSchool === school && {
+                      backgroundColor: SchoolColors[school],
+                    },
+                  ]}
+                  onPress={() =>
+                    setSelectedSchool(selectedSchool === school ? null : school)
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.filterButtonText,
+                      selectedSchool === school && styles.filterButtonTextActive,
+                    ]}
+                  >
+                    {school}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          
+          <View style={styles.filterRow}>
+            <Text style={styles.filterSubLabel}>Nível:</Text>
+            <View style={styles.filterButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.filterButton,
+                  selectedLevel === null && styles.filterButtonActive,
+                ]}
+                onPress={() => setSelectedLevel(null)}
+              >
+                <Text
+                  style={[
+                    styles.filterButtonText,
+                    selectedLevel === null && styles.filterButtonTextActive,
+                  ]}
+                >
+                  Todos
+                </Text>
+              </TouchableOpacity>
+              {levels.map((level) => (
+                <TouchableOpacity
+                  key={level}
+                  style={[
+                    styles.filterButton,
+                    selectedLevel === level && styles.filterButtonActive,
+                  ]}
+                  onPress={() =>
+                    setSelectedLevel(selectedLevel === level ? null : level)
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.filterButtonText,
+                      selectedLevel === level && styles.filterButtonTextActive,
+                    ]}
+                  >
+                    {level}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </View>
       </View>
 
-      <FlatList
-        data={groupedSpells}
-        keyExtractor={(item) => item.title}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <View style={styles.groupContainer}>
-            <View
-              style={[
-                styles.groupHeader,
-                { backgroundColor: SchoolColors[item.school as keyof typeof SchoolColors] },
-              ]}
-            >
-              <Text style={styles.groupTitle}>{item.title}</Text>
-              <Text style={styles.groupCount}>{item.data.length} magias</Text>
+      {filteredSpells.length === 0 ? (
+        <View style={styles.noResultsContainer}>
+          <Text style={styles.noResultsText}>Nenhuma magia encontrada</Text>
+          <Text style={styles.noResultsSubText}>Tente ajustar seus filtros de busca</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={groupedSpells}
+          keyExtractor={(item) => item.title}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <View style={styles.groupContainer}>
+              <View
+                style={[
+                  styles.groupHeader,
+                  { backgroundColor: SchoolColors[item.school as keyof typeof SchoolColors] },
+                ]}
+              >
+                <Text style={styles.groupTitle}>{item.title}</Text>
+                <Text style={styles.groupCount}>{item.data.length} magias</Text>
+              </View>
+              {item.data.map((spell) => (
+                <SpellCard
+                  key={spell.id}
+                  spell={spell}
+                  onPress={() => setSelectedSpell(spell)}
+                />
+              ))}
             </View>
-            {item.data.map((spell) => (
-              <SpellCard
-                key={spell.id}
-                spell={spell}
-                onPress={() => setSelectedSpell(spell)}
-              />
-            ))}
-          </View>
-        )}
-        contentContainerStyle={styles.listContent}
-      />
+          )}
+          contentContainerStyle={styles.listContent}
+        />
+      )}
 
       <SpellDetailModal
         spell={selectedSpell}
@@ -193,10 +273,32 @@ const styles = StyleSheet.create({
   filterSection: {
     marginBottom: 12,
   },
+  filterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   filterLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: '#333',
+  },
+  clearFiltersButton: {
+    padding: 4,
+  },
+  clearFiltersText: {
+    fontSize: 12,
+    color: '#3498DB',
+    fontWeight: '500',
+  },
+  filterRow: {
+    marginBottom: 12,
+  },
+  filterSubLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#555',
     marginBottom: 8,
   },
   filterButtons: {
@@ -246,5 +348,22 @@ const styles = StyleSheet.create({
   groupCount: {
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.8)',
+  },
+  noResultsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  noResultsText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  noResultsSubText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
   },
 });

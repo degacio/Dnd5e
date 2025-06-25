@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Spell, SchoolColors } from '@/types/spell';
-import { Sparkles, ChevronRight } from 'lucide-react-native';
+import { Sparkles, ChevronRight, ChevronDown } from 'lucide-react-native';
 
 interface SpellCardProps {
   spell: Spell;
@@ -9,10 +9,23 @@ interface SpellCardProps {
 }
 
 export function SpellCard({ spell, onPress }: SpellCardProps) {
+  const [expanded, setExpanded] = useState(false);
   const schoolColor = SchoolColors[spell.school as keyof typeof SchoolColors];
 
+  const handlePress = () => {
+    if (onPress) {
+      onPress();
+    } else {
+      setExpanded(!expanded);
+    }
+  };
+
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity 
+      style={styles.container} 
+      onPress={handlePress} 
+      activeOpacity={0.8}
+    >
       <View style={[styles.header, { backgroundColor: schoolColor }]}>
         <View style={styles.titleRow}>
           <Sparkles size={18} color="#FFFFFF" />
@@ -32,15 +45,37 @@ export function SpellCard({ spell, onPress }: SpellCardProps) {
           <Text style={styles.rangeText}>{spell.range}</Text>
         </View>
 
-        <Text style={styles.description} numberOfLines={2}>
-          {spell.description}
-        </Text>
+        {expanded ? (
+          <View style={styles.expandedContent}>
+            <Text style={styles.description}>
+              {spell.description}
+            </Text>
+            
+            <View style={styles.componentsContainer}>
+              <Text style={styles.componentsLabel}>Componentes:</Text>
+              <Text style={styles.componentsText}>{spell.components}</Text>
+            </View>
+            
+            <View style={styles.durationContainer}>
+              <Text style={styles.durationLabel}>Duração:</Text>
+              <Text style={styles.durationText}>{spell.duration}</Text>
+            </View>
+          </View>
+        ) : (
+          <Text style={styles.description} numberOfLines={2}>
+            {spell.description}
+          </Text>
+        )}
 
         <View style={styles.footer}>
           <Text style={styles.classes} numberOfLines={1}>
             {spell.classes.join(', ')}
           </Text>
-          <ChevronRight size={16} color="#666" />
+          {expanded ? (
+            <ChevronDown size={16} color="#666" />
+          ) : (
+            <ChevronRight size={16} color="#666" />
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -118,6 +153,41 @@ const styles = StyleSheet.create({
     color: '#444',
     lineHeight: 18,
     marginBottom: 12,
+  },
+  expandedContent: {
+    marginBottom: 12,
+  },
+  componentsContainer: {
+    flexDirection: 'row',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  componentsLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#555',
+    marginRight: 4,
+  },
+  componentsText: {
+    fontSize: 13,
+    color: '#666',
+    flex: 1,
+  },
+  durationContainer: {
+    flexDirection: 'row',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  durationLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#555',
+    marginRight: 4,
+  },
+  durationText: {
+    fontSize: 13,
+    color: '#666',
+    flex: 1,
   },
   footer: {
     flexDirection: 'row',
