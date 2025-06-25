@@ -6,11 +6,12 @@ import {
   FlatList,
   TouchableOpacity,
   TextInput,
+  Modal,
 } from 'react-native';
 import { Spell, School, SchoolColors } from '@/types/spell';
 import { SpellCard } from './SpellCard';
 import { SpellDetailModal } from './SpellDetailModal';
-import { Search, ChevronDown, ChevronRight, BookOpen } from 'lucide-react-native';
+import { Search, ChevronDown, ChevronRight, BookOpen, Filter, X } from 'lucide-react-native';
 
 interface SpellListProps {
   spells: Spell[];
@@ -26,14 +27,28 @@ interface SchoolGroup {
 export function SpellList({ spells }: SpellListProps) {
   const [selectedSpell, setSelectedSpell] = useState<Spell | null>(null);
   const [searchText, setSearchText] = useState('');
+  const [selectedClass, setSelectedClass] = useState<string | null>(null);
+  const [showClassFilter, setShowClassFilter] = useState(false);
   const [expandedSchools, setExpandedSchools] = useState<Set<string>>(new Set());
+
+  // Get all unique classes from spells
+  const availableClasses = useMemo(() => {
+    const classSet = new Set<string>();
+    spells.forEach(spell => {
+      spell.classes.forEach(className => {
+        classSet.add(className);
+      });
+    });
+    return Array.from(classSet).sort();
+  }, [spells]);
 
   const filteredSpells = useMemo(() => {
     return spells.filter((spell) => {
       const matchesSearch = spell.name.toLowerCase().includes(searchText.toLowerCase());
-      return matchesSearch;
+      const matchesClass = !selectedClass || spell.classes.includes(selectedClass);
+      return matchesSearch && matchesClass;
     });
-  }, [spells, searchText]);
+  }, [spells, searchText, selectedClass]);
 
   const schoolGroups = useMemo(() => {
     const groups: Record<string, Spell[]> = {};
@@ -66,6 +81,11 @@ export function SpellList({ spells }: SpellListProps) {
     setExpandedSchools(newExpanded);
   };
 
+  const selectClass = (className: string | null) => {
+    setSelectedClass(className);
+    setShowClassFilter(false);
+  };
+
   const totalSpells = filteredSpells.length;
 
   return (
@@ -80,10 +100,38 @@ export function SpellList({ spells }: SpellListProps) {
             onChangeText={setSearchText}
           />
         </View>
+
+        <View style={styles.filtersRow}>
+          <TouchableOpacity
+            style={styles.classFilterButton}
+            onPress={() => setShowClassFilter(true)}
+            activeOpacity={0.8}
+          >
+            <Filter size={16} color="#666" />
+            <Text style={styles.classFilterText}>
+              {selectedClass || 'Todas as Classes'}
+            </Text>
+            <ChevronDown size={16} color="#666" />
+          </TouchableOpacity>
+
+          {selectedClass && (
+            <TouchableOpacity
+              style={styles.clearFilterButton}
+              onPress={() => setSelectedClass(null)}
+              activeOpacity={0.8}
+            >
+              <X size={14} color="#E74C3C" />
+            </TouchableOpacity>
+          )}
+        </View>
+
         <View style={styles.totalCountContainer}>
           <BookOpen size={16} color="#D4AF37" />
           <Text style={styles.totalCount}>
             Total: {totalSpells} magias
+            {selectedClass && (
+              <Text style={styles.filterInfo}> • Filtrado por: {selectedClass}</Text>
+            )}
           </Text>
         </View>
       </View>
@@ -135,6 +183,69 @@ export function SpellList({ spells }: SpellListProps) {
         contentContainerStyle={styles.listContent}
       />
 
+      {/* Class Filter Modal */}
+      <Modal
+        visible={showClassFilter}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowClassFilter(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowClassFilter(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filtrar por Classe</Text>
+              <TouchableOpacity
+                onPress={() => setShowClassFilter(false)}
+                style={styles.modalCloseButton}
+              >
+                <X size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.classOption,
+                !selectedClass && styles.classOptionSelected
+              ]}
+              onPress={() => selectClass(null)}
+            >
+              <Text style={[
+                styles.classOptionText,
+                !selectedClass && styles.classOptionTextSelected
+              ]}>
+                Todas as Classes
+              </Text>
+            </TouchableOpacity>
+
+            <FlatList
+              data={availableClasses}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.classOption,
+                    selectedClass === item && styles.classOptionSelected
+                  ]}
+                  onPress={() => selectClass(item)}
+                >
+                  <Text style={[
+                    styles.classOptionText,
+                    selectedClass === item && styles.classOptionTextSelected
+                  ]}>
+                    {item}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       <SpellDetailModal
         spell={selectedSpell}
         visible={!!selectedSpell}
@@ -177,6 +288,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
+  filtersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  classFilterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    flex: 1,
+    gap: 8,
+  },
+  classFilterText: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+    flex: 1,
+  },
+  clearFilterButton: {
+    backgroundColor: '#FFF5F5',
+    borderRadius: 20,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
   totalCountContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -187,6 +329,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     fontWeight: '600',
+  },
+  filterInfo: {
+    fontSize: 12,
+    color: '#999',
+    fontWeight: '400',
   },
   listContent: {
     paddingBottom: 24,
@@ -250,5 +397,61 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     borderWidth: 1,
     borderColor: '#E8E8E8',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '80%',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E8E8',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  classOption: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginVertical: 2,
+  },
+  classOptionSelected: {
+    backgroundColor: '#D4AF37',
+  },
+  classOptionText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  classOptionTextSelected: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });

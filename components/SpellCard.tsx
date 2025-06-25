@@ -40,17 +40,6 @@ export function SpellCard({ spell, onPress }: SpellCardProps) {
               <Text style={styles.infoValue}>{spell.range}</Text>
             </View>
           </View>
-          
-          <View style={styles.infoRow}>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Componentes:</Text>
-              <Text style={styles.infoValue}>{spell.components}</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Duração:</Text>
-              <Text style={styles.infoValue}>{spell.duration}</Text>
-            </View>
-          </View>
         </View>
 
         <View style={styles.divider} />
