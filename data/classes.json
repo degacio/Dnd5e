@@ -54,7 +54,7 @@
       },
       
       {
-        "level:" 5,
+        "level": 5,
         "name": "Ataque Extra",
         "description": "A partir do 5º nível, você pode realizar dois ataques, em vez de um, sempre que realizar a ação Atacar em seu turno."  
       },
