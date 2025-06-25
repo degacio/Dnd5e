@@ -101,10 +101,6 @@ export function SpellList({ spells }: SpellListProps) {
     setShowClassFilter(false);
   };
 
-  const clearSearch = () => {
-    setSearchText('');
-  };
-
   const totalSpells = filteredSpells.length;
 
   // Debug information
@@ -134,15 +130,6 @@ export function SpellList({ spells }: SpellListProps) {
             value={searchText}
             onChangeText={setSearchText}
           />
-          {searchText.length > 0 && (
-            <TouchableOpacity
-              style={styles.clearSearchButton}
-              onPress={clearSearch}
-              activeOpacity={0.7}
-            >
-              <X size={18} color="#999" />
-            </TouchableOpacity>
-          )}
         </View>
 
         <View style={styles.filtersRow}>
@@ -349,12 +336,6 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontSize: 16,
     color: '#333',
-  },
-  clearSearchButton: {
-    padding: 4,
-    marginLeft: 8,
-    borderRadius: 12,
-    backgroundColor: '#F0F0F0',
   },
   filtersRow: {
     flexDirection: 'row',

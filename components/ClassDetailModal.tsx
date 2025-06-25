@@ -12,7 +12,6 @@ import { DnDClass, ClassColors } from '@/types/dndClass';
 import { Spell } from '@/types/spell';
 import { SpellCard } from './SpellCard';
 import { SpellDetailModal } from './SpellDetailModal';
-import { adaptSpellsFromLivroDoJogador } from '@/utils/spellAdapter';
 import { 
   X, 
   Shield, 
@@ -39,10 +38,8 @@ export function ClassDetailModal({ dndClass, visible, onClose }: ClassDetailModa
     if (!dndClass) return [];
     
     try {
-      const rawSpellsData = require('@/data/magias-livro-do-jogador.json');
-      const adaptedSpells = adaptSpellsFromLivroDoJogador(rawSpellsData);
-      
-      return adaptedSpells.filter((spell: Spell) => 
+      const spellsData = require('@/data/spells.json');
+      return spellsData.filter((spell: Spell) => 
         spell.classes.includes(dndClass.name) || 
         (spell.subclasses && spell.subclasses.some(subclass => 
           dndClass.subclasses.includes(subclass)
