@@ -13,27 +13,51 @@ export function SpellCard({ spell, onPress }: SpellCardProps) {
 
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
-      <View style={styles.content}>
+      <View style={[styles.content, { borderLeftColor: schoolColor }]}>
         <View style={styles.header}>
           <View style={styles.titleRow}>
             <View style={[styles.levelIndicator, { backgroundColor: schoolColor }]}>
               <Text style={styles.levelText}>{spell.level}º</Text>
             </View>
-            <Text style={styles.spellName}>{spell.name}</Text>
+            <View style={styles.nameContainer}>
+              <Text style={styles.spellName}>{spell.name}</Text>
+              <Text style={styles.schoolText}>{spell.school}</Text>
+            </View>
           </View>
-          <ChevronRight size={16} color="#666" />
+          <ChevronRight size={18} color="#999" />
         </View>
 
-        <View style={styles.infoRow}>
-          <Text style={styles.infoText}>{spell.castingTime}</Text>
-          <Text style={styles.separator}>•</Text>
-          <Text style={styles.infoText}>{spell.range}</Text>
-          <Text style={styles.separator}>•</Text>
-          <Text style={styles.infoText}>{spell.components}</Text>
+        <View style={styles.divider} />
+
+        <View style={styles.infoSection}>
+          <View style={styles.infoRow}>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Tempo:</Text>
+              <Text style={styles.infoValue}>{spell.castingTime}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Alcance:</Text>
+              <Text style={styles.infoValue}>{spell.range}</Text>
+            </View>
+          </View>
+          
+          <View style={styles.infoRow}>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Componentes:</Text>
+              <Text style={styles.infoValue}>{spell.components}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Duração:</Text>
+              <Text style={styles.infoValue}>{spell.duration}</Text>
+            </View>
+          </View>
         </View>
+
+        <View style={styles.divider} />
 
         <View style={styles.footer}>
-          <Text style={styles.classes} numberOfLines={1}>
+          <Text style={styles.classesLabel}>Classes:</Text>
+          <Text style={styles.classes} numberOfLines={2}>
             {spell.classes.join(', ')}
           </Text>
         </View>
@@ -44,66 +68,104 @@ export function SpellCard({ spell, onPress }: SpellCardProps) {
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 4,
-    marginHorizontal: 8,
+    marginVertical: 6,
+    marginHorizontal: 12,
   },
   content: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#E5E5E5',
+    borderLeftWidth: 5,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 8,
   },
   titleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     flex: 1,
   },
   levelIndicator: {
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     marginRight: 12,
+    minWidth: 36,
+    alignItems: 'center',
   },
   levelText: {
     fontSize: 12,
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  spellName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+  nameContainer: {
     flex: 1,
+  },
+  spellName: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 2,
+    lineHeight: 22,
+  },
+  schoolText: {
+    fontSize: 13,
+    color: '#666',
+    fontWeight: '500',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginVertical: 12,
+  },
+  infoSection: {
+    gap: 8,
   },
   infoRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  infoItem: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
   },
-  infoText: {
+  infoLabel: {
     fontSize: 12,
-    color: '#666',
+    color: '#888',
+    fontWeight: '600',
+    marginRight: 6,
+    minWidth: 70,
   },
-  separator: {
+  infoValue: {
     fontSize: 12,
-    color: '#999',
-    marginHorizontal: 6,
+    color: '#333',
+    fontWeight: '500',
+    flex: 1,
   },
   footer: {
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-    paddingTop: 8,
+    flexDirection: 'column',
+    gap: 4,
+  },
+  classesLabel: {
+    fontSize: 12,
+    color: '#888',
+    fontWeight: '600',
   },
   classes: {
-    fontSize: 11,
-    color: '#666',
+    fontSize: 12,
+    color: '#555',
     fontWeight: '500',
+    lineHeight: 16,
   },
 });

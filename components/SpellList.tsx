@@ -10,7 +10,7 @@ import {
 import { Spell, School, SchoolColors } from '@/types/spell';
 import { SpellCard } from './SpellCard';
 import { SpellDetailModal } from './SpellDetailModal';
-import { Search, ChevronDown, ChevronRight } from 'lucide-react-native';
+import { Search, ChevronDown, ChevronRight, BookOpen } from 'lucide-react-native';
 
 interface SpellListProps {
   spells: Spell[];
@@ -80,9 +80,12 @@ export function SpellList({ spells }: SpellListProps) {
             onChangeText={setSearchText}
           />
         </View>
-        <Text style={styles.totalCount}>
-          Total: {totalSpells} magias
-        </Text>
+        <View style={styles.totalCountContainer}>
+          <BookOpen size={16} color="#D4AF37" />
+          <Text style={styles.totalCount}>
+            Total: {totalSpells} magias
+          </Text>
+        </View>
       </View>
 
       <FlatList
@@ -102,9 +105,9 @@ export function SpellList({ spells }: SpellListProps) {
               <View style={styles.schoolHeaderContent}>
                 <View style={styles.schoolTitleContainer}>
                   {item.expanded ? (
-                    <ChevronDown size={20} color="#FFFFFF" />
+                    <ChevronDown size={22} color="#FFFFFF" />
                   ) : (
-                    <ChevronRight size={20} color="#FFFFFF" />
+                    <ChevronRight size={22} color="#FFFFFF" />
                   )}
                   <Text style={styles.schoolTitle}>
                     Escola de {item.school}
@@ -144,51 +147,65 @@ export function SpellList({ spells }: SpellListProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F5F7FA',
   },
   searchContainer: {
     padding: 16,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    borderBottomWidth: 2,
+    borderBottomColor: '#E8E8E8',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F8F9FA',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 8,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
   },
   searchInput: {
     flex: 1,
-    marginLeft: 8,
+    marginLeft: 12,
     fontSize: 16,
     color: '#333',
+  },
+  totalCountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   totalCount: {
     fontSize: 14,
     color: '#666',
-    textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   listContent: {
-    paddingBottom: 20,
+    paddingBottom: 24,
   },
   schoolContainer: {
-    marginTop: 16,
+    marginTop: 20,
     marginHorizontal: 16,
   },
   schoolHeader: {
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    elevation: 3,
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   schoolHeaderContent: {
     flexDirection: 'row',
@@ -204,15 +221,17 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginLeft: 8,
+    marginLeft: 12,
   },
   countBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    minWidth: 40,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    minWidth: 44,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   countText: {
     fontSize: 14,
@@ -220,14 +239,16 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   spellsContainer: {
-    marginTop: 8,
+    marginTop: 12,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 16,
     paddingVertical: 8,
-    elevation: 2,
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
   },
 });
