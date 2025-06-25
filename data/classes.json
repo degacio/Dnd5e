@@ -90,8 +90,15 @@
       },
 
       {
-
-        
+        "level": 18,
+        "name": "Fúria Indomável",
+        "description": "A partir do 18º nível, se sua soma para um teste de Força for menor do que seu valor de Força, você pode usar esse valor no lugar da soma."
+      },
+      
+      {
+        "level": 20,
+        "name": "Campeão Primitivo",
+        "description": "No 20º nível, você incorpora o poder da natureza. Seus valores de Força e Constituição aumentam em 4. Seu máximo para esses valores agora é 24."
       }
     ],
     "subclasses": ["Caminho do Berserker", "Caminho do Guardião Totêmico"]
