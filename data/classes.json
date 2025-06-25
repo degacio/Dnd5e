@@ -75,9 +75,9 @@
         "level": 9,
         "name": "Crítico Brutal",
         "description": "Começando no 9º nível, você pode rolar um dado de dano adicional ao determinar o dano extra de um acerto crítico com um ataque corpo a corpo. Isso aumenta para dois dados adicionais no 13º nível e três dados adicionais no 17º nível."
+        ]
       }
       
-    ]
     ],
     "subclasses": ["Caminho do Berserker", "Caminho do Guardião Totêmico"]
   },
