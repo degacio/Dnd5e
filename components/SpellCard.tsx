@@ -32,10 +32,6 @@ export function SpellCard({ spell, onPress }: SpellCardProps) {
           <Text style={styles.rangeText}>{spell.range}</Text>
         </View>
 
-        <Text style={styles.description} numberOfLines={2}>
-          {spell.description}
-        </Text>
-
         <View style={styles.footer}>
           <Text style={styles.classes} numberOfLines={1}>
             {spell.classes.join(', ')}
@@ -93,7 +89,7 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   schoolText: {
     fontSize: 12,
@@ -112,12 +108,6 @@ const styles = StyleSheet.create({
   rangeText: {
     fontSize: 12,
     color: '#666',
-  },
-  description: {
-    fontSize: 13,
-    color: '#444',
-    lineHeight: 18,
-    marginBottom: 12,
   },
   footer: {
     flexDirection: 'row',

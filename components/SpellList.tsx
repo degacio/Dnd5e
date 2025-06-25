@@ -53,7 +53,7 @@ export function SpellList({ spells }: SpellListProps) {
       })
       .map((key) => ({
         title: key,
-        data: groups[key].sort((a, b) => a.name.localeCompare(b.name)),
+        data: groups[key].sort((a, b) => a.name.localeCompare(b.name)), // Ordenação alfabética
         school: groups[key][0].school,
       }));
   }, [filteredSpells]);
