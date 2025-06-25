@@ -76,6 +76,17 @@
         "name": "Crítico Brutal",
         "description": "Começando no 9º nível, você pode rolar um dado de dano adicional ao determinar o dano extra de um acerto crítico com um ataque corpo a corpo. Isso aumenta para dois dados adicionais no 13º nível e três dados adicionais no 17º nível."
       }
+
+      {
+        "level": 11,
+        "name": "Fúria Implacável",
+        "description": "A partir do 11º nível, sua fúria pode mantê-lo lutando apesar de ferimentos graves. Se você chegar a 0 pontos de vida enquanto está em fúria e não morrer imediatamente, você pode fazer uma salvaguarda de Constituição CD 10. Se tiver sucesso, você cairá a 1 ponto de vida em vez disso.\nCada vez que você usa esse recurso após o primeiro, a CD aumenta em 5. Quando você terminar um descanso curto ou longo, a CD é redefinida para 10".
+"
+      },
+
+      {
+        
+      }
       
     ],
     "subclasses": ["Caminho do Berserker", "Caminho do Guardião Totêmico"]
