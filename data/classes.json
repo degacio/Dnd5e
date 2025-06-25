@@ -19,12 +19,12 @@
       {
         "level": 1,
         "name": "Fúria",
-        "description": ""
+        "description": "Na batalha, você luta com uma ferocidade primitiva. Em seu turno, você pode entrar em fúria como uma ação bônus, "
       },
       {
         "level": 1,
         "name": "Defesa sem Armadura",
-        "description": "Quando você não estiver vestindo qualquer armadura, sua Classe de Armadura será 10 + seu modificador de Destreza + seu modificador de Constituição."
+        "description": "Quando você não estiver vestindo qualquer armadura, sua Classe de Armadura será 10 + seu modificador de Destreza + seu modificador de Constituição.Durante essa fúria, você ganha os seguintes benefícios se não estiver usando armadura pesada: "
       },
       {
         "level": 2,
