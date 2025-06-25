@@ -35,7 +35,42 @@
       {
         "level": 2,
         "name": "Sentido de Perigo",
-        "description": "Você adquire um sentido sobrenatural de quando as coisas próximas não estão como deveriam."
+        "description": "No 2º nível, você desenvolve um sentido incomum de quando as coisas nas proximidades não estão como deveriam, dando-lhe uma vantagem quando se esquiva de perigos. Você tem vantagem em salvaguardas de Destreza contra efeitos que você pode ver, como armadilhas e magias. Para obter esse benefício, você não pode estar cego, ensurdecido ou incapacitado."
+      }
+
+      {
+        "level": 3,
+        "name": "Trilha Primitiva"
+        "description": "No 3º nível, você escolhe uma trilha que molda a natureza da sua fúria. As trilhas são detalhadas ao final da descrição dessa classe. Sua escolha concede características a você no 3º nível e novamente no 6º, 10º e 14º níveis."
+      },
+
+      {
+      "level": 4,
+        "name": "Aumento no Valor de Atributo"
+        "descritpion": "Quando você atinge o 4º nível, e novamente no 8º, 12º, 16º e 19º níveis, você pode aumentar um atributo de sua escolha em 2 pontos, ou você pode aumentar dois atributos de sua escolha em 1 ponto cada. Como de costume, você não pode aumentar um atributo acima de 20 usando esse recurso."
+      },
+      {
+        "level:" 5,
+        "name": "Ataque Extra"
+        "description": "A partir do 5º nível, você pode realizar dois ataques, em vez de um, sempre que realizar a ação Atacar em seu turno."  
+      },
+      
+      {
+        "level": 5,
+        "name": "Movimento Rápido"
+        "description": "Começando no 5º nível, sua velocidade aumenta em 3m quando você não está usando armadura pesada."
+      },
+
+      {
+        "level": 7,
+        "name": "Instintos Primitivos"
+        "description": "No 7º nível, seus instintos estão tão afiados que você tem vantagem em rolagens de iniciativa. Além disso, se você estiver surpreso no início do combate e não estiver incapacitado, você pode agir normalmente em seu primeiro turno, mas somente se entrar em fúria antes de fazer qualquer outra coisa naquele turno."
+      },
+
+      {
+        "level": 9,
+        "name": "Crítico Brutal"
+        "description": "Começando no 9º nível, você pode rolar um dado de dano adicional ao determinar o dano extra de um acerto crítico com um ataque corpo a corpo. Isso aumenta para dois dados adicionais no 13º nível e três dados adicionais no 17º nível."
       }
     ],
     "subclasses": ["Caminho do Berserker", "Caminho do Guardião Totêmico"]
