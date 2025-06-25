@@ -35,38 +35,23 @@ export default function SpellsTab() {
       if (customSpells && customSpells.length > 0) {
         setSpells(customSpells);
       } else {
-        // If no custom spells, load the default ones
-        const defaultSpells = require('@/data/spells.json');
-        
-        // Check if we have the Livro do Jogador data
+        // Load from the Livro do Jogador data
         try {
           const livroDoJogadorData = require('@/data/magias-livro-do-jogador.json');
           const adaptedSpells = adaptSpellsFromLivroDoJogador(livroDoJogadorData);
           
           if (adaptedSpells && adaptedSpells.length > 0) {
-            // Combine default spells with adapted ones, avoiding duplicates
-            const combinedSpells = [...defaultSpells];
-            
-            adaptedSpells.forEach(spell => {
-              // Check if spell already exists by ID
-              const existingIndex = combinedSpells.findIndex(s => s.id === spell.id);
-              if (existingIndex === -1) {
-                combinedSpells.push(spell);
-              }
-            });
-            
-            setSpells(combinedSpells);
+            setSpells(adaptedSpells);
           } else {
-            setSpells(defaultSpells);
+            setSpells([]);
           }
         } catch (error) {
-          console.log('Livro do Jogador data not available, using default spells');
-          setSpells(defaultSpells);
+          console.log('Livro do Jogador data not available');
+          setSpells([]);
         }
       }
     } catch (error) {
       console.error('Erro ao carregar magias:', error);
-      // Fallback to empty array if everything fails
       setSpells([]);
     } finally {
       setLoading(false);
