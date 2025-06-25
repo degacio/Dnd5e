@@ -35,17 +35,32 @@ export function SpellList({ spells }: SpellListProps) {
   const availableClasses = useMemo(() => {
     const classSet = new Set<string>();
     spells.forEach(spell => {
-      spell.classes.forEach(className => {
-        classSet.add(className);
-      });
+      if (spell.classes && Array.isArray(spell.classes)) {
+        spell.classes.forEach(className => {
+          if (className && className.trim()) {
+            classSet.add(className.trim());
+          }
+        });
+      }
     });
     return Array.from(classSet).sort();
   }, [spells]);
 
   const filteredSpells = useMemo(() => {
     return spells.filter((spell) => {
-      const matchesSearch = spell.name.toLowerCase().includes(searchText.toLowerCase());
-      const matchesClass = !selectedClass || spell.classes.includes(selectedClass);
+      // Check search text
+      const matchesSearch = !searchText || 
+        spell.name.toLowerCase().includes(searchText.toLowerCase());
+      
+      // Check class filter
+      let matchesClass = true;
+      if (selectedClass) {
+        matchesClass = spell.classes && Array.isArray(spell.classes) && 
+          spell.classes.some(className => 
+            className && className.trim().toLowerCase() === selectedClass.toLowerCase()
+          );
+      }
+      
       return matchesSearch && matchesClass;
     });
   }, [spells, searchText, selectedClass]);
@@ -87,6 +102,22 @@ export function SpellList({ spells }: SpellListProps) {
   };
 
   const totalSpells = filteredSpells.length;
+
+  // Debug information
+  console.log('Total spells:', spells.length);
+  console.log('Available classes:', availableClasses);
+  console.log('Selected class:', selectedClass);
+  console.log('Filtered spells count:', filteredSpells.length);
+  
+  if (selectedClass) {
+    const spellsForClass = spells.filter(spell => 
+      spell.classes && Array.isArray(spell.classes) && 
+      spell.classes.some(className => 
+        className && className.trim().toLowerCase() === selectedClass.toLowerCase()
+      )
+    );
+    console.log(`Spells for class "${selectedClass}":`, spellsForClass.length);
+  }
 
   return (
     <View style={styles.container}>
@@ -134,6 +165,15 @@ export function SpellList({ spells }: SpellListProps) {
             )}
           </Text>
         </View>
+
+        {/* Debug info - remove in production */}
+        {__DEV__ && (
+          <View style={styles.debugContainer}>
+            <Text style={styles.debugText}>
+              Debug: {spells.length} total, {availableClasses.length} classes
+            </Text>
+          </View>
+        )}
       </View>
 
       <FlatList
@@ -217,29 +257,38 @@ export function SpellList({ spells }: SpellListProps) {
                 styles.classOptionText,
                 !selectedClass && styles.classOptionTextSelected
               ]}>
-                Todas as Classes
+                Todas as Classes ({spells.length} magias)
               </Text>
             </TouchableOpacity>
 
             <FlatList
               data={availableClasses}
               keyExtractor={(item) => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.classOption,
-                    selectedClass === item && styles.classOptionSelected
-                  ]}
-                  onPress={() => selectClass(item)}
-                >
-                  <Text style={[
-                    styles.classOptionText,
-                    selectedClass === item && styles.classOptionTextSelected
-                  ]}>
-                    {item}
-                  </Text>
-                </TouchableOpacity>
-              )}
+              renderItem={({ item }) => {
+                const spellCount = spells.filter(spell => 
+                  spell.classes && Array.isArray(spell.classes) && 
+                  spell.classes.some(className => 
+                    className && className.trim().toLowerCase() === item.toLowerCase()
+                  )
+                ).length;
+
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.classOption,
+                      selectedClass === item && styles.classOptionSelected
+                    ]}
+                    onPress={() => selectClass(item)}
+                  >
+                    <Text style={[
+                      styles.classOptionText,
+                      selectedClass === item && styles.classOptionTextSelected
+                    ]}>
+                      {item} ({spellCount} magias)
+                    </Text>
+                  </TouchableOpacity>
+                );
+              }}
               showsVerticalScrollIndicator={false}
             />
           </View>
@@ -334,6 +383,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     fontWeight: '400',
+  },
+  debugContainer: {
+    marginTop: 8,
+    padding: 8,
+    backgroundColor: '#FFF3CD',
+    borderRadius: 6,
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#856404',
+    textAlign: 'center',
   },
   listContent: {
     paddingBottom: 24,
