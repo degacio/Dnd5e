@@ -20,6 +20,7 @@ import {
   Users
 } from 'lucide-react-native';
 import * as DocumentPicker from 'expo-document-picker';
+import { adaptSpellsFromLivroDoJogador } from '@/utils/spellAdapter';
 
 export default function SettingsTab() {
   const [spellsFileLoaded, setSpellsFileLoaded] = useState(false);
@@ -28,10 +29,38 @@ export default function SettingsTab() {
   const pickSpellsFile = async () => {
     try {
       if (Platform.OS === 'web') {
-        Alert.alert(
-          'Funcionalidade Web',
-          'No navegador, você pode editar diretamente os arquivos JSON na pasta /data do projeto.'
-        );
+        // For web, we can try to use the built-in file picker
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'application/json';
+        
+        input.onchange = async (e) => {
+          // @ts-ignore
+          const file = e.target.files[0];
+          if (!file) return;
+          
+          try {
+            const text = await file.text();
+            const jsonData = JSON.parse(text);
+            
+            // Use the adapter to convert the data
+            const adaptedSpells = adaptSpellsFromLivroDoJogador(jsonData);
+            
+            if (adaptedSpells.length > 0) {
+              // Store the adapted spells in localStorage for web
+              localStorage.setItem('customSpells', JSON.stringify(adaptedSpells));
+              setSpellsFileLoaded(true);
+              Alert.alert('Sucesso', `Arquivo de magias carregado com sucesso! ${adaptedSpells.length} magias importadas.`);
+            } else {
+              Alert.alert('Erro', 'Não foi possível processar o arquivo de magias.');
+            }
+          } catch (error) {
+            console.error('Error processing JSON file:', error);
+            Alert.alert('Erro', 'O arquivo não está em um formato JSON válido.');
+          }
+        };
+        
+        input.click();
         return;
       }
 
@@ -40,10 +69,29 @@ export default function SettingsTab() {
         copyToCacheDirectory: true,
       });
 
-      if (!result.canceled) {
-        // Aqui você implementaria a lógica para processar o arquivo JSON
-        setSpellsFileLoaded(true);
-        Alert.alert('Sucesso', 'Arquivo de magias carregado com sucesso!');
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        try {
+          // For native platforms, we need to read the file
+          const response = await fetch(asset.uri);
+          const text = await response.text();
+          const jsonData = JSON.parse(text);
+          
+          // Use the adapter to convert the data
+          const adaptedSpells = adaptSpellsFromLivroDoJogador(jsonData);
+          
+          if (adaptedSpells.length > 0) {
+            // Here you would store the spells in AsyncStorage for native platforms
+            // AsyncStorage.setItem('customSpells', JSON.stringify(adaptedSpells));
+            setSpellsFileLoaded(true);
+            Alert.alert('Sucesso', `Arquivo de magias carregado com sucesso! ${adaptedSpells.length} magias importadas.`);
+          } else {
+            Alert.alert('Erro', 'Não foi possível processar o arquivo de magias.');
+          }
+        } catch (error) {
+          console.error('Error processing JSON file:', error);
+          Alert.alert('Erro', 'O arquivo não está em um formato JSON válido.');
+        }
       }
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível carregar o arquivo de magias.');
@@ -65,7 +113,7 @@ export default function SettingsTab() {
         copyToCacheDirectory: true,
       });
 
-      if (!result.canceled) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
         // Aqui você implementaria a lógica para processar o arquivo JSON
         setClassesFileLoaded(true);
         Alert.alert('Sucesso', 'Arquivo de classes carregado com sucesso!');
@@ -93,6 +141,12 @@ export default function SettingsTab() {
           text: 'Limpar', 
           style: 'destructive',
           onPress: () => {
+            // Clear localStorage on web or AsyncStorage on native
+            if (Platform.OS === 'web') {
+              localStorage.removeItem('customSpells');
+            } else {
+              // AsyncStorage.removeItem('customSpells');
+            }
             setSpellsFileLoaded(false);
             setClassesFileLoaded(false);
             Alert.alert('Dados Limpos', 'Todos os dados personalizados foram removidos.');
@@ -108,7 +162,7 @@ export default function SettingsTab() {
       'Os arquivos JSON devem seguir a estrutura específica do aplicativo:\n\n' +
       '• Magias: Devem conter campos como name, school, level, description, etc.\n' +
       '• Classes: Devem conter informações como hitDie, primaryAbility, classFeatures, etc.\n\n' +
-      'Consulte a documentação para mais detalhes sobre a estrutura dos dados.'
+      'O aplicativo suporta a importação do formato "Livro do Jogador" e fará a conversão automaticamente para o formato interno.'
     );
   };
 
