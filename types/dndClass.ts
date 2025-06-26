@@ -17,6 +17,7 @@ export interface DnDClass {
 
 export interface ClassFeature {
   level: number;
+  proficiencyBonus?: number;
   name: string;
   description: string;
 }
