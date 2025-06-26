@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Modal,
   View,
@@ -21,9 +21,10 @@ import {
   BookOpen, 
   Users, 
   Star,
-  Sparkles 
+  Sparkles,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react-native';
-import { useState } from 'react';
 
 interface ClassDetailModalProps {
   dndClass: DnDClass | null;
@@ -33,6 +34,7 @@ interface ClassDetailModalProps {
 
 export function ClassDetailModal({ dndClass, visible, onClose }: ClassDetailModalProps) {
   const [selectedSpell, setSelectedSpell] = useState<Spell | null>(null);
+  const [expandedSubclasses, setExpandedSubclasses] = useState<Set<string>>(new Set());
   
   const classSpells = useMemo(() => {
     if (!dndClass) return [];
@@ -42,7 +44,11 @@ export function ClassDetailModal({ dndClass, visible, onClose }: ClassDetailModa
       return spellsData.filter((spell: Spell) => 
         spell.classes.includes(dndClass.name) || 
         (spell.subclasses && spell.subclasses.some(subclass => 
-          dndClass.subclasses.includes(subclass)
+          dndClass.subclasses.some(classSubclass => 
+            typeof classSubclass === 'string' 
+              ? classSubclass === subclass
+              : classSubclass.name === subclass
+          )
         ))
       );
     } catch (error) {
@@ -50,6 +56,21 @@ export function ClassDetailModal({ dndClass, visible, onClose }: ClassDetailModa
       return [];
     }
   }, [dndClass]);
+
+  const toggleSubclass = (subclassName: string) => {
+    const newExpanded = new Set(expandedSubclasses);
+    if (newExpanded.has(subclassName)) {
+      newExpanded.delete(subclassName);
+    } else {
+      newExpanded.add(subclassName);
+    }
+    setExpandedSubclasses(newExpanded);
+  };
+
+  // Função para calcular o bônus de proficiência baseado no nível
+  const getProficiencyBonus = (level: number): number => {
+    return Math.ceil(level / 4) + 1;
+  };
 
   if (!dndClass) return null;
 
@@ -154,6 +175,9 @@ export function ClassDetailModal({ dndClass, visible, onClose }: ClassDetailModa
                 <View key={index} style={styles.featureItem}>
                   <View style={styles.featureHeader}>
                     <Text style={styles.featureLevel}>Nível {feature.level}</Text>
+                    <Text style={[styles.proficiencyBonus, { backgroundColor: classColor }]}>
+                      +{getProficiencyBonus(feature.level)}
+                    </Text>
                     <Text style={styles.featureName}>{feature.name}</Text>
                   </View>
                   <Text style={styles.featureDescription}>{feature.description}</Text>
@@ -201,13 +225,67 @@ export function ClassDetailModal({ dndClass, visible, onClose }: ClassDetailModa
               </View>
               
               <View style={styles.subclassesContainer}>
-                {dndClass.subclasses.map((subclass, index) => (
-                  <View key={index} style={[styles.subclassBadge, { borderColor: classColor }]}>
-                    <Text style={[styles.subclassText, { color: classColor }]}>
-                      {typeof subclass === 'string' ? subclass : subclass.name}
-                    </Text>
-                  </View>
-                ))}
+                {dndClass.subclasses.map((subclass, index) => {
+                  const subclassName = typeof subclass === 'string' ? subclass : subclass.name;
+                  const isExpanded = expandedSubclasses.has(subclassName);
+                  const isObject = typeof subclass === 'object';
+
+                  return (
+                    <View key={index} style={styles.subclassItem}>
+                      <TouchableOpacity
+                        style={[styles.subclassHeader, { borderColor: classColor }]}
+                        onPress={() => toggleSubclass(subclassName)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.subclassHeaderContent}>
+                          {isExpanded ? (
+                            <ChevronDown size={20} color={classColor} />
+                          ) : (
+                            <ChevronRight size={20} color={classColor} />
+                          )}
+                          <Text style={[styles.subclassName, { color: classColor }]}>
+                            {subclassName}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+
+                      {isExpanded && isObject && (
+                        <View style={styles.subclassContent}>
+                          <Text style={styles.subclassDescription}>
+                            {subclass.description}
+                          </Text>
+
+                          {subclass.features && subclass.features.length > 0 && (
+                            <View style={styles.subclassFeaturesContainer}>
+                              <Text style={styles.subclassFeaturesTitle}>
+                                Características da Subclasse:
+                              </Text>
+                              
+                              {subclass.features.map((feature, featureIndex) => (
+                                <View key={featureIndex} style={styles.subclassFeatureItem}>
+                                  <View style={styles.subclassFeatureHeader}>
+                                    <Text style={styles.subclassFeatureLevel}>
+                                      Nível {feature.level}
+                                    </Text>
+                                    <Text style={[styles.proficiencyBonus, { backgroundColor: '#999' }]}>
+                                      +{getProficiencyBonus(feature.level)}
+                                    </Text>
+                                    <Text style={styles.subclassFeatureName}>
+                                      {feature.name}
+                                    </Text>
+                                  </View>
+                                  <Text style={styles.subclassFeatureDescription}>
+                                    {feature.description}
+                                  </Text>
+                                </View>
+                              ))}
+                            </View>
+                          )}
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
               </View>
             </View>
 
@@ -374,13 +452,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
-    marginRight: 12,
+    marginRight: 8,
   },
   proficiencyBonus: {
     fontSize: 12,
     fontWeight: '600',
     color: '#FFFFFF',
-    backgroundColor: '#D4AF37',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
@@ -409,19 +486,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   subclassesContainer: {
-    gap: 8,
-  },
-  subclassBadge: {
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#F8F9FA',
-  },
-  subclassText: {
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
+    gap: 12,
   },
   subclassItem: {
     marginBottom: 8,
@@ -430,9 +495,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 12,
+    borderWidth: 2,
+    borderRadius: 12,
+    paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#F8F9FA',
   },
@@ -442,9 +507,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   subclassName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
-    marginLeft: 8,
+    marginLeft: 12,
   },
   subclassContent: {
     marginTop: 8,
@@ -487,7 +552,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
-    marginRight: 10,
+    marginRight: 8,
   },
   subclassFeatureName: {
     fontSize: 14,
