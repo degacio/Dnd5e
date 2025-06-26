@@ -23,7 +23,8 @@ import {
   Star,
   Sparkles,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Scroll
 } from 'lucide-react-native';
 
 interface ClassDetailModalProps {
@@ -212,6 +213,58 @@ export function ClassDetailModal({ dndClass, visible, onClose }: ClassDetailModa
                     </Text>
                   )}
                 </View>
+
+                {/* Progressão de Magias */}
+                <View style={styles.spellProgressionSection}>
+                  <View style={styles.sectionHeader}>
+                    <Scroll size={18} color={classColor} />
+                    <Text style={[styles.subsectionTitle, { color: classColor }]}>
+                      Progressão de Magias
+                    </Text>
+                  </View>
+
+                  {/* Truques Conhecidos */}
+                  {dndClass.spellcasting.cantripsKnown && (
+                    <View style={styles.progressionItem}>
+                      <Text style={styles.progressionTitle}>Truques Conhecidos por Nível:</Text>
+                      <Text style={styles.progressionText}>
+                        {dndClass.spellcasting.cantripsKnown.map((count, index) => 
+                          `Nv${index + 1}: ${count}`
+                        ).join(' • ')}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Magias Conhecidas */}
+                  {dndClass.spellcasting.spellsKnown && (
+                    <View style={styles.progressionItem}>
+                      <Text style={styles.progressionTitle}>Magias Conhecidas por Nível:</Text>
+                      <Text style={styles.progressionText}>
+                        {dndClass.spellcasting.spellsKnown.map((count, index) => 
+                          `Nv${index + 1}: ${count}`
+                        ).join(' • ')}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Espaços de Magia */}
+                  <View style={styles.spellSlotsContainer}>
+                    <Text style={styles.progressionTitle}>Espaços de Magia por Nível:</Text>
+                    
+                    {Object.entries(dndClass.spellcasting.spellSlots).map(([spellLevel, slots]) => (
+                      <View key={spellLevel} style={styles.spellSlotRow}>
+                        <Text style={[styles.spellSlotLevel, { color: classColor }]}>
+                          {spellLevel}º Nível:
+                        </Text>
+                        <Text style={styles.spellSlotText}>
+                          {slots.map((count, index) => 
+                            `Nv${index + 1}: ${count}`
+                          ).join(' • ')}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
               </View>
             )}
 
@@ -379,6 +432,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
+  subsectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
   basicInfoGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -476,6 +534,7 @@ const styles = StyleSheet.create({
   },
   spellcastingInfo: {
     gap: 8,
+    marginBottom: 16,
   },
   spellcastingLabel: {
     fontSize: 14,
@@ -484,6 +543,48 @@ const styles = StyleSheet.create({
   spellcastingValue: {
     fontWeight: '600',
     color: '#333',
+  },
+  spellProgressionSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5E5',
+  },
+  progressionItem: {
+    marginBottom: 16,
+  },
+  progressionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  progressionText: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 18,
+    backgroundColor: '#F8F9FA',
+    padding: 12,
+    borderRadius: 8,
+  },
+  spellSlotsContainer: {
+    marginTop: 8,
+  },
+  spellSlotRow: {
+    marginBottom: 12,
+  },
+  spellSlotLevel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  spellSlotText: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 18,
+    backgroundColor: '#F8F9FA',
+    padding: 10,
+    borderRadius: 6,
   },
   subclassesContainer: {
     gap: 12,
