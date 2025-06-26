@@ -214,55 +214,95 @@ export function ClassDetailModal({ dndClass, visible, onClose }: ClassDetailModa
                   )}
                 </View>
 
-                {/* Progressão de Magias */}
+                {/* Tabela de Progressão de Magias */}
                 <View style={styles.spellProgressionSection}>
                   <View style={styles.sectionHeader}>
                     <Scroll size={18} color={classColor} />
                     <Text style={[styles.subsectionTitle, { color: classColor }]}>
-                      Progressão de Magias
+                      Tabela de Progressão de Magias
                     </Text>
                   </View>
 
-                  {/* Truques Conhecidos */}
-                  {dndClass.spellcasting.cantripsKnown && (
-                    <View style={styles.progressionItem}>
-                      <Text style={styles.progressionTitle}>Truques Conhecidos por Nível:</Text>
-                      <Text style={styles.progressionText}>
-                        {dndClass.spellcasting.cantripsKnown.map((count, index) => 
-                          `Nv${index + 1}: ${count}`
-                        ).join(' • ')}
-                      </Text>
-                    </View>
-                  )}
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tableContainer}>
+                    <View style={styles.table}>
+                      {/* Cabeçalho da Tabela */}
+                      <View style={styles.tableHeader}>
+                        <View style={[styles.tableCell, styles.headerCell, styles.levelColumn]}>
+                          <Text style={styles.headerText}>Nível</Text>
+                        </View>
+                        
+                        {dndClass.spellcasting.cantripsKnown && (
+                          <View style={[styles.tableCell, styles.headerCell, styles.cantripsColumn]}>
+                            <Text style={styles.headerText}>Truques</Text>
+                          </View>
+                        )}
+                        
+                        {dndClass.spellcasting.spellsKnown && (
+                          <View style={[styles.tableCell, styles.headerCell, styles.spellsKnownColumn]}>
+                            <Text style={styles.headerText}>Magias{'\n'}Conhecidas</Text>
+                          </View>
+                        )}
 
-                  {/* Magias Conhecidas */}
-                  {dndClass.spellcasting.spellsKnown && (
-                    <View style={styles.progressionItem}>
-                      <Text style={styles.progressionTitle}>Magias Conhecidas por Nível:</Text>
-                      <Text style={styles.progressionText}>
-                        {dndClass.spellcasting.spellsKnown.map((count, index) => 
-                          `Nv${index + 1}: ${count}`
-                        ).join(' • ')}
-                      </Text>
-                    </View>
-                  )}
-
-                  {/* Espaços de Magia */}
-                  <View style={styles.spellSlotsContainer}>
-                    <Text style={styles.progressionTitle}>Espaços de Magia por Nível:</Text>
-                    
-                    {Object.entries(dndClass.spellcasting.spellSlots).map(([spellLevel, slots]) => (
-                      <View key={spellLevel} style={styles.spellSlotRow}>
-                        <Text style={[styles.spellSlotLevel, { color: classColor }]}>
-                          {spellLevel}º Nível:
-                        </Text>
-                        <Text style={styles.spellSlotText}>
-                          {slots.map((count, index) => 
-                            `Nv${index + 1}: ${count}`
-                          ).join(' • ')}
-                        </Text>
+                        {/* Colunas para cada nível de magia */}
+                        {Object.keys(dndClass.spellcasting.spellSlots).map((spellLevel) => (
+                          <View key={spellLevel} style={[styles.tableCell, styles.headerCell, styles.spellSlotColumn]}>
+                            <Text style={styles.headerText}>{spellLevel}º</Text>
+                          </View>
+                        ))}
                       </View>
-                    ))}
+
+                      {/* Linhas da Tabela */}
+                      {Array.from({ length: 20 }, (_, index) => {
+                        const level = index + 1;
+                        return (
+                          <View key={level} style={[styles.tableRow, level % 2 === 0 && styles.evenRow]}>
+                            <View style={[styles.tableCell, styles.levelColumn]}>
+                              <Text style={styles.cellText}>{level}</Text>
+                            </View>
+                            
+                            {dndClass.spellcasting.cantripsKnown && (
+                              <View style={[styles.tableCell, styles.cantripsColumn]}>
+                                <Text style={styles.cellText}>
+                                  {dndClass.spellcasting.cantripsKnown[index] || '—'}
+                                </Text>
+                              </View>
+                            )}
+                            
+                            {dndClass.spellcasting.spellsKnown && (
+                              <View style={[styles.tableCell, styles.spellsKnownColumn]}>
+                                <Text style={styles.cellText}>
+                                  {dndClass.spellcasting.spellsKnown[index] || '—'}
+                                </Text>
+                              </View>
+                            )}
+
+                            {Object.entries(dndClass.spellcasting.spellSlots).map(([spellLevel, slots]) => (
+                              <View key={spellLevel} style={[styles.tableCell, styles.spellSlotColumn]}>
+                                <Text style={[styles.cellText, slots[index] > 0 && styles.activeSlot]}>
+                                  {slots[index] || '—'}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </ScrollView>
+
+                  {/* Legenda */}
+                  <View style={styles.legendContainer}>
+                    <Text style={styles.legendTitle}>Legenda:</Text>
+                    <Text style={styles.legendText}>
+                      • <Text style={styles.legendBold}>Truques</Text>: Magias de nível 0 que podem ser conjuradas à vontade
+                    </Text>
+                    {dndClass.spellcasting.spellsKnown && (
+                      <Text style={styles.legendText}>
+                        • <Text style={styles.legendBold}>Magias Conhecidas</Text>: Total de magias que a classe pode conhecer
+                      </Text>
+                    )}
+                    <Text style={styles.legendText}>
+                      • <Text style={styles.legendBold}>1º-9º</Text>: Espaços de magia disponíveis por nível de magia
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -550,41 +590,88 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E5E5E5',
   },
-  progressionItem: {
-    marginBottom: 16,
+  tableContainer: {
+    marginVertical: 16,
   },
-  progressionTitle: {
+  table: {
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#F8F9FA',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+  },
+  evenRow: {
+    backgroundColor: '#FAFAFA',
+  },
+  tableCell: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRightWidth: 1,
+    borderRightColor: '#E5E5E5',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerCell: {
+    backgroundColor: '#F0F0F0',
+  },
+  levelColumn: {
+    width: 60,
+  },
+  cantripsColumn: {
+    width: 70,
+  },
+  spellsKnownColumn: {
+    width: 80,
+  },
+  spellSlotColumn: {
+    width: 50,
+  },
+  headerText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#333',
+    textAlign: 'center',
+  },
+  cellText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  activeSlot: {
+    color: '#333',
+    fontWeight: '600',
+  },
+  legendContainer: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+  },
+  legendTitle: {
     fontSize: 14,
     fontWeight: '600',
     color: '#333',
     marginBottom: 8,
   },
-  progressionText: {
+  legendText: {
     fontSize: 12,
     color: '#666',
     lineHeight: 18,
-    backgroundColor: '#F8F9FA',
-    padding: 12,
-    borderRadius: 8,
-  },
-  spellSlotsContainer: {
-    marginTop: 8,
-  },
-  spellSlotRow: {
-    marginBottom: 12,
-  },
-  spellSlotLevel: {
-    fontSize: 14,
-    fontWeight: '600',
     marginBottom: 4,
   },
-  spellSlotText: {
-    fontSize: 12,
-    color: '#666',
-    lineHeight: 18,
-    backgroundColor: '#F8F9FA',
-    padding: 10,
-    borderRadius: 6,
+  legendBold: {
+    fontWeight: '600',
+    color: '#333',
   },
   subclassesContainer: {
     gap: 12,
