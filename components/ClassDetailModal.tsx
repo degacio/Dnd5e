@@ -204,7 +204,7 @@ export function ClassDetailModal({ dndClass, visible, onClose }: ClassDetailModa
                 {dndClass.subclasses.map((subclass, index) => (
                   <View key={index} style={[styles.subclassBadge, { borderColor: classColor }]}>
                     <Text style={[styles.subclassText, { color: classColor }]}>
-                      {subclass}
+                      {typeof subclass === 'string' ? subclass : subclass.name}
                     </Text>
                   </View>
                 ))}
@@ -410,6 +410,18 @@ const styles = StyleSheet.create({
   },
   subclassesContainer: {
     gap: 8,
+  },
+  subclassBadge: {
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#F8F9FA',
+  },
+  subclassText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   subclassItem: {
     marginBottom: 8,
