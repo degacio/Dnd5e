@@ -376,6 +376,16 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginRight: 12,
   },
+  proficiencyBonus: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    backgroundColor: '#D4AF37',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginRight: 12,
+  },
   featureName: {
     fontSize: 16,
     fontWeight: '600',
@@ -399,19 +409,84 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   subclassesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
   },
-  subclassBadge: {
+  subclassItem: {
+    marginBottom: 8,
+  },
+  subclassHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderWidth: 1,
     borderRadius: 20,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 12,
+    backgroundColor: '#F8F9FA',
   },
-  subclassText: {
+  subclassHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  subclassName: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  subclassContent: {
+    marginTop: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FAFAFA',
+    borderRadius: 12,
+  },
+  subclassDescription: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  subclassFeaturesContainer: {
+    marginTop: 8,
+  },
+  subclassFeaturesTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  subclassFeatureItem: {
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+  },
+  subclassFeatureHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  subclassFeatureLevel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    backgroundColor: '#999',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  subclassFeatureName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
+  },
+  subclassFeatureDescription: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
   },
   spellsContainer: {
     marginTop: -6,

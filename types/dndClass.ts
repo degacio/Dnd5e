@@ -12,12 +12,24 @@ export interface DnDClass {
   startingEquipment: string[];
   classFeatures: ClassFeature[];
   spellcasting?: SpellcastingInfo;
-  subclasses: string[];
+  subclasses: Subclass[];
 }
 
 export interface ClassFeature {
   level: number;
   proficiencyBonus?: number;
+  name: string;
+  description: string;
+}
+
+export interface Subclass {
+  name: string;
+  description: string;
+  features: SubclassFeature[];
+}
+
+export interface SubclassFeature {
+  level: number;
   name: string;
   description: string;
 }
