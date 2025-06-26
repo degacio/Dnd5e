@@ -13,11 +13,12 @@
     "startingEquipment": [
       "Machado grande ou qualquer arma marcial corpo a corpo",
       "Dois machados de mão ou qualquer arma simples",
-      "Kit de explorador e quatro azagaias"
-    ],
+      "Kit de explorador e quatro azagaias",
+      ],
     "classFeatures": [
       {
         "level": 1,
+        "proficiencia": +2 ,
         "name": "Fúria",
         "description": "Na batalha, você luta com uma ferocidade primitiva. Em seu turno, você pode entrar em fúria como uma ação bônus.\n\nDurante essa fúria, você ganha os seguintes benefícios se não estiver usando armadura pesada:\n\n• Você tem vantagem em testes de Força e em salvaguardas de Força.\n• Quando realiza um ataque com arma corpo a corpo usando Força, você recebe um bônus no dano que aumenta conforme você sobe de nível como um bárbaro, conforme mostrado na coluna de Dano da Fúria da tabela O Bárbaro.\n• Você tem resistência a dano contundente, perfurante e cortante.\n\nSe você é capaz de lançar magias, não pode lançá-las ou concentrar-se nelas enquanto está em fúria.\n\nSua fúria dura 1 minuto e termina antecipadamente se você ficar inconsciente ou se seu turno terminar e você não tiver atacado uma criatura hostil desde o seu último turno ou não tiver sofrido dano desde então. Você também pode encerrar sua fúria em seu turno como uma ação bônus. Uma vez que você entrou em fúria o número de vezes mostrado para o seu nível de bárbaro na coluna de Fúria da tabela O Bárbaro, você deve terminar um descanso longo antes de poder entrar em Fúria novamente."
 
