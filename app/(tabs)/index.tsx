@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
 import { SpellList } from '@/components/SpellList';
 import { Spell } from '@/types/spell';
-import { Sparkles, UserCircle } from 'lucide-react-native';
+import { Sparkles, CircleUser as UserCircle } from 'lucide-react-native';
 import { adaptSpellsFromLivroDoJogador } from '@/utils/spellAdapter';
 import { Platform } from 'react-native';
 import { router } from 'expo-router';
