@@ -1,9 +1,8 @@
 import { supabase } from '@/lib/supabase';
-import { CharacterInsert, CharacterUpdate } from '@/types/database';
+import { CharacterInsert } from '@/types/database';
 
 export async function GET(request: Request) {
   try {
-    const url = new URL(request.url);
     const authHeader = request.headers.get('Authorization');
     
     if (!authHeader) {
