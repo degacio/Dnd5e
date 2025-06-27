@@ -46,6 +46,11 @@ interface Skill {
   expertise: boolean;
 }
 
+interface KnownSpell {
+  name: string;
+  level: number;
+}
+
 const SKILLS = [
   { name: 'Acrobacia', ability: 'dexterity' },
   { name: 'Adestrar Animais', ability: 'wisdom' },
@@ -90,7 +95,7 @@ export default function EditCharacterScreen() {
   });
   const [skills, setSkills] = useState<Skill[]>([]);
   const [spellSlots, setSpellSlots] = useState<Record<string, [number, number]>>({});
-  const [knownSpells, setKnownSpells] = useState<string[]>([]);
+  const [knownSpells, setKnownSpells] = useState<KnownSpell[]>([]);
 
   useEffect(() => {
     if (id) {
@@ -138,9 +143,28 @@ export default function EditCharacterScreen() {
         setHpCurrent(characterData.hp_current);
         setHpMax(characterData.hp_max);
         setSpellSlots(characterData.spell_slots || {});
-        setKnownSpells(characterData.spells_known?.map((spell: any) => 
-          typeof spell === 'string' ? spell : spell.name
-        ) || []);
+        
+        // Process spells_known to ensure consistent structure
+        const processedSpells: KnownSpell[] = [];
+        if (characterData.spells_known && Array.isArray(characterData.spells_known)) {
+          characterData.spells_known.forEach((spell: any) => {
+            if (typeof spell === 'string') {
+              // If it's just a string, we need to find the spell level
+              const spellData = require('@/data/spells.json').find((s: Spell) => s.name === spell);
+              processedSpells.push({
+                name: spell,
+                level: spellData?.level || 0
+              });
+            } else if (spell && typeof spell === 'object' && spell.name) {
+              // If it's an object with name, ensure it has level
+              processedSpells.push({
+                name: spell.name,
+                level: spell.level || 0
+              });
+            }
+          });
+        }
+        setKnownSpells(processedSpells);
 
         // Set stats from character_data
         if (characterData.character_data?.stats) {
@@ -239,13 +263,16 @@ export default function EditCharacterScreen() {
   };
 
   const addSpell = (spellName: string) => {
-    if (!knownSpells.includes(spellName)) {
-      setKnownSpells(prev => [...prev, spellName]);
+    if (!knownSpells.some(spell => spell.name === spellName)) {
+      const spellData = availableSpells.find(spell => spell.name === spellName);
+      if (spellData) {
+        setKnownSpells(prev => [...prev, { name: spellName, level: spellData.level }]);
+      }
     }
   };
 
   const removeSpell = (spellName: string) => {
-    setKnownSpells(prev => prev.filter(spell => spell !== spellName));
+    setKnownSpells(prev => prev.filter(spell => spell.name !== spellName));
   };
 
   const validateData = () => {
@@ -317,7 +344,7 @@ export default function EditCharacterScreen() {
         hp_current: hpCurrent,
         hp_max: hpMax,
         spell_slots: cleanSpellSlots,
-        spells_known: knownSpells.map(spellName => ({ name: spellName })),
+        spells_known: knownSpells, // Now correctly structured with name and level
         character_data: {
           ...character.character_data,
           stats,
@@ -730,12 +757,12 @@ export default function EditCharacterScreen() {
             </View>
 
             <View style={styles.knownSpellsList}>
-              {knownSpells.map((spellName, index) => (
+              {knownSpells.map((spell, index) => (
                 <View key={index} style={styles.knownSpellItem}>
-                  <Text style={styles.knownSpellName}>{spellName}</Text>
+                  <Text style={styles.knownSpellName}>{spell.name}</Text>
                   <TouchableOpacity
                     style={[styles.removeSpellButton, saving && styles.disabledButton]}
-                    onPress={() => removeSpell(spellName)}
+                    onPress={() => removeSpell(spell.name)}
                     disabled={saving}
                   >
                     <Trash2 size={16} color={saving ? "#BDC3C7" : "#E74C3C"} />
@@ -750,7 +777,7 @@ export default function EditCharacterScreen() {
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View style={styles.availableSpellsList}>
                     {availableSpells
-                      .filter(spell => !knownSpells.includes(spell.name))
+                      .filter(spell => !knownSpells.some(knownSpell => knownSpell.name === spell.name))
                       .slice(0, 10)
                       .map((spell) => (
                         <TouchableOpacity
