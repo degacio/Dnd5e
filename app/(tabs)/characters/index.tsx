@@ -5,6 +5,7 @@ import { CharacterCard } from '@/components/CharacterCard';
 import { CharacterDetailModal } from '@/components/CharacterDetailModal';
 import { supabase } from '@/lib/supabase';
 import { Shield, User, Plus, RefreshCw } from 'lucide-react-native';
+import { router } from 'expo-router';
 
 export default function CharactersTab() {
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -146,70 +147,8 @@ export default function CharactersTab() {
     }
   };
 
-  const createSampleCharacter = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        Alert.alert('Erro', 'Você precisa estar autenticado para criar personagens.');
-        return;
-      }
-
-      const sampleCharacter = {
-        name: 'Gandalf o Cinzento',
-        class_name: 'Mago',
-        level: 10,
-        hp_current: 68,
-        hp_max: 78,
-        spell_slots: {
-          1: [4, 4],
-          2: [3, 3],
-          3: [3, 3],
-          4: [3, 3],
-          5: [2, 2]
-        },
-        spells_known: [
-          { name: 'Bola de Fogo', level: 3 },
-          { name: 'Mísseis Mágicos', level: 1 },
-          { name: 'Escudo', level: 1 },
-          { name: 'Raio', level: 3 },
-          { name: 'Voo', level: 3 }
-        ],
-        character_data: {
-          race: 'Humano',
-          background: 'Sábio',
-          alignment: 'Neutro e Bom',
-          stats: {
-            strength: 10,
-            dexterity: 13,
-            constitution: 16,
-            intelligence: 20,
-            wisdom: 15,
-            charisma: 16
-          }
-        }
-      };
-
-      const response = await fetch('/api/characters', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(sampleCharacter),
-      });
-
-      if (response.ok) {
-        const newCharacter = await response.json();
-        setCharacters(prev => [newCharacter, ...prev]);
-        Alert.alert('Sucesso', 'Personagem de exemplo criado!');
-      } else {
-        Alert.alert('Erro', 'Não foi possível criar o personagem.');
-      }
-    } catch (error) {
-      console.error('Error creating character:', error);
-      Alert.alert('Erro', 'Erro ao criar personagem.');
-    }
+  const navigateToCreateCharacter = () => {
+    router.push('/characters/create');
   };
 
   if (loading) {
@@ -243,7 +182,7 @@ export default function CharactersTab() {
           
           <TouchableOpacity 
             style={styles.headerButton}
-            onPress={createSampleCharacter}
+            onPress={navigateToCreateCharacter}
           >
             <Plus size={20} color="#D4AF37" />
           </TouchableOpacity>
@@ -267,15 +206,15 @@ export default function CharactersTab() {
             <User size={64} color="#D4AF37" />
             <Text style={styles.emptyTitle}>Nenhum Personagem</Text>
             <Text style={styles.emptyText}>
-              Você ainda não possui personagens criados. Clique no botão + para criar um personagem de exemplo.
+              Você ainda não possui personagens criados. Clique no botão + para criar um novo personagem.
             </Text>
             
             <TouchableOpacity 
               style={styles.createButton}
-              onPress={createSampleCharacter}
+              onPress={navigateToCreateCharacter}
             >
               <Plus size={20} color="#FFFFFF" />
-              <Text style={styles.createButtonText}>Criar Personagem de Exemplo</Text>
+              <Text style={styles.createButtonText}>Criar Novo Personagem</Text>
             </TouchableOpacity>
           </View>
         )}
