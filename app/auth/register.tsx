@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, UserPlus, Eye, EyeOff, Mail, Lock, User, CheckCircle } from 'lucide-react-native';
+import { ArrowLeft, UserPlus, Eye, EyeOff, Mail, Lock, User, CircleCheck as CheckCircle } from 'lucide-react-native';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
