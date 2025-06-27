@@ -13,45 +13,73 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('🔐 AuthGuard mounted, checking auth status...');
     checkAuthStatus();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('🔐 Auth state changed:', event, session?.user?.email);
-        setIsAuthenticated(!!session);
+        console.log('🔐 Auth state changed:', event, session?.user?.email || 'No user');
+        console.log('📊 Session details:', {
+          hasSession: !!session,
+          hasUser: !!session?.user,
+          userId: session?.user?.id,
+          email: session?.user?.email
+        });
+        
+        const authenticated = !!session;
+        setIsAuthenticated(authenticated);
         setLoading(false);
 
         if (event === 'SIGNED_OUT') {
-          router.replace('/auth');
+          console.log('🚪 User signed out, redirecting to auth...');
+          setIsAuthenticated(false);
+          // Use setTimeout to avoid navigation during render
+          setTimeout(() => {
+            router.replace('/auth');
+          }, 100);
+        } else if (event === 'SIGNED_IN' && session) {
+          console.log('🚪 User signed in, setting authenticated state...');
+          setIsAuthenticated(true);
         }
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log('🔐 AuthGuard unmounting, cleaning up subscription...');
+      subscription.unsubscribe();
+    };
   }, []);
-
-  // Handle navigation when authentication status changes
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.replace('/auth');
-    }
-  }, [isAuthenticated, loading]);
 
   const checkAuthStatus = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('🔍 Checking auth status:', session?.user?.email || 'No session');
-      setIsAuthenticated(!!session);
+      console.log('🔍 Checking initial auth status...');
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('❌ Error checking auth status:', error);
+        setIsAuthenticated(false);
+      } else {
+        const authenticated = !!session;
+        console.log('🔍 Auth status check result:', {
+          authenticated,
+          hasSession: !!session,
+          hasUser: !!session?.user,
+          userEmail: session?.user?.email
+        });
+        setIsAuthenticated(authenticated);
+      }
     } catch (error) {
-      console.error('Error checking auth status:', error);
+      console.error('💥 Error checking auth status:', error);
       setIsAuthenticated(false);
     } finally {
       setLoading(false);
     }
   };
 
+  // Show loading while checking auth status
   if (loading) {
+    console.log('⏳ AuthGuard showing loading state...');
     return (
       <View style={styles.loadingContainer}>
         <Shield size={48} color="#D4AF37" />
@@ -61,7 +89,15 @@ export function AuthGuard({ children }: AuthGuardProps) {
     );
   }
 
+  // If not authenticated, redirect to auth screen
   if (!isAuthenticated) {
+    console.log('🚫 User not authenticated, redirecting to auth screen...');
+    
+    // Use setTimeout to avoid navigation during render
+    setTimeout(() => {
+      router.replace('/auth');
+    }, 100);
+    
     return (
       <View style={styles.loadingContainer}>
         <Shield size={48} color="#D4AF37" />
@@ -70,6 +106,8 @@ export function AuthGuard({ children }: AuthGuardProps) {
     );
   }
 
+  // User is authenticated, render children
+  console.log('✅ User authenticated, rendering protected content...');
   return <>{children}</>;
 }
 
