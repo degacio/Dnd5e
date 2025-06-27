@@ -106,22 +106,30 @@ export default function EditCharacterScreen() {
 
   const loadCharacter = async () => {
     try {
+      console.log('🔄 Loading character with ID:', id);
+      
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
+        console.error('❌ No session found');
         Alert.alert('Erro', 'Você precisa estar autenticado.');
         router.back();
         return;
       }
 
+      console.log('📤 Making API request to load character...');
       const response = await fetch(`/api/characters/${id}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
       });
 
+      console.log('📥 API Response status:', response.status);
+
       if (response.ok) {
         const characterData = await response.json();
+        console.log('✅ Character loaded successfully:', characterData.name);
+        
         setCharacter(characterData);
         
         // Set form data
@@ -151,11 +159,13 @@ export default function EditCharacterScreen() {
         const foundClass = classesData.find(cls => cls.name === characterData.class_name);
         setCharacterClass(foundClass || null);
       } else {
+        const errorText = await response.text();
+        console.error('❌ Failed to load character:', errorText);
         Alert.alert('Erro', 'Não foi possível carregar o personagem.');
         router.back();
       }
     } catch (error) {
-      console.error('Error loading character:', error);
+      console.error('💥 Error loading character:', error);
       Alert.alert('Erro', 'Erro ao carregar personagem.');
       router.back();
     } finally {
@@ -238,14 +248,48 @@ export default function EditCharacterScreen() {
     setKnownSpells(prev => prev.filter(spell => spell !== spellName));
   };
 
+  const validateData = () => {
+    if (!name.trim()) {
+      Alert.alert('Erro de Validação', 'O nome do personagem é obrigatório.');
+      return false;
+    }
+
+    if (level < 1 || level > 20) {
+      Alert.alert('Erro de Validação', 'O nível deve estar entre 1 e 20.');
+      return false;
+    }
+
+    if (hpCurrent < 0 || hpMax < 1) {
+      Alert.alert('Erro de Validação', 'Os pontos de vida devem ser válidos.');
+      return false;
+    }
+
+    if (hpCurrent > hpMax) {
+      Alert.alert('Erro de Validação', 'HP atual não pode ser maior que HP máximo.');
+      return false;
+    }
+
+    return true;
+  };
+
   const saveCharacter = async () => {
-    if (!character) return;
+    if (!character) {
+      Alert.alert('Erro', 'Dados do personagem não encontrados.');
+      return;
+    }
+
+    if (!validateData()) {
+      return;
+    }
 
     setSaving(true);
+    console.log('💾 Starting character save process...');
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
+        console.error('❌ No session found during save');
         Alert.alert('Erro', 'Você precisa estar autenticado.');
         return;
       }
@@ -259,12 +303,20 @@ export default function EditCharacterScreen() {
         return acc;
       }, {} as Record<string, { proficient: boolean; expertise: boolean }>);
 
+      // Clean spell slots (remove empty entries)
+      const cleanSpellSlots = Object.entries(spellSlots).reduce((acc, [level, slots]) => {
+        if (slots[1] > 0) { // Only include if max slots > 0
+          acc[level] = slots;
+        }
+        return acc;
+      }, {} as Record<string, [number, number]>);
+
       const updateData = {
-        name,
+        name: name.trim(),
         level,
         hp_current: hpCurrent,
         hp_max: hpMax,
-        spell_slots: spellSlots,
+        spell_slots: cleanSpellSlots,
         spells_known: knownSpells.map(spellName => ({ name: spellName })),
         character_data: {
           ...character.character_data,
@@ -272,6 +324,16 @@ export default function EditCharacterScreen() {
           skills: skillsData,
         },
       };
+
+      console.log('📤 Sending update request...');
+      console.log('📊 Update data summary:', {
+        name: updateData.name,
+        level: updateData.level,
+        hp: `${updateData.hp_current}/${updateData.hp_max}`,
+        spellSlotsCount: Object.keys(updateData.spell_slots).length,
+        spellsCount: updateData.spells_known.length,
+        skillsCount: Object.keys(updateData.character_data.skills).length,
+      });
 
       const response = await fetch(`/api/characters/${id}`, {
         method: 'PUT',
@@ -282,25 +344,73 @@ export default function EditCharacterScreen() {
         body: JSON.stringify(updateData),
       });
 
+      console.log('📥 Save response status:', response.status);
+
       if (response.ok) {
-        Alert.alert('Sucesso', 'Personagem atualizado com sucesso!', [
-          {
-            text: 'OK',
-            onPress: () => router.back(),
-          },
-        ]);
+        const updatedCharacter = await response.json();
+        console.log('✅ Character saved successfully:', updatedCharacter.name);
+        
+        Alert.alert(
+          'Sucesso', 
+          'Personagem atualizado com sucesso!', 
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                console.log('🔙 Navigating back after successful save');
+                router.back();
+              },
+            },
+          ]
+        );
       } else {
-        Alert.alert('Erro', 'Não foi possível salvar as alterações.');
+        const errorText = await response.text();
+        console.error('❌ Save failed:', errorText);
+        
+        let errorMessage = 'Não foi possível salvar as alterações.';
+        
+        // Try to parse error for better user feedback
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.error) {
+            errorMessage = `Erro: ${errorData.error}`;
+          }
+        } catch (e) {
+          // Use default message if can't parse error
+        }
+        
+        Alert.alert('Erro de Salvamento', errorMessage);
       }
     } catch (error) {
-      console.error('Error saving character:', error);
-      Alert.alert('Erro', 'Erro ao salvar personagem.');
+      console.error('💥 Error saving character:', error);
+      
+      let errorMessage = 'Erro inesperado ao salvar personagem.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'Tempo limite excedido. Tente novamente.';
+        }
+      }
+      
+      Alert.alert('Erro', errorMessage);
     } finally {
       setSaving(false);
+      console.log('🔄 Save process completed');
     }
   };
 
   const goBack = () => {
+    if (saving) {
+      Alert.alert(
+        'Salvamento em Andamento',
+        'O personagem está sendo salvo. Aguarde a conclusão.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
     router.back();
   };
 
@@ -324,8 +434,12 @@ export default function EditCharacterScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={goBack}>
-          <ArrowLeft size={24} color="#FFFFFF" />
+        <TouchableOpacity 
+          style={[styles.backButton, saving && styles.disabledButton]} 
+          onPress={goBack}
+          disabled={saving}
+        >
+          <ArrowLeft size={24} color={saving ? "#95A5A6" : "#FFFFFF"} />
         </TouchableOpacity>
         
         <View style={styles.titleContainer}>
@@ -346,6 +460,12 @@ export default function EditCharacterScreen() {
         </TouchableOpacity>
       </View>
 
+      {saving && (
+        <View style={styles.savingIndicator}>
+          <Text style={styles.savingText}>Salvando alterações...</Text>
+        </View>
+      )}
+
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Basic Info Section */}
         <View style={styles.section}>
@@ -354,10 +474,11 @@ export default function EditCharacterScreen() {
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Nome do Personagem</Text>
             <TextInput
-              style={styles.textInput}
+              style={[styles.textInput, saving && styles.disabledInput]}
               value={name}
               onChangeText={setName}
               placeholder="Nome do personagem"
+              editable={!saving}
             />
           </View>
 
@@ -366,17 +487,19 @@ export default function EditCharacterScreen() {
               <Text style={styles.inputLabel}>Nível</Text>
               <View style={styles.numberInputContainer}>
                 <TouchableOpacity
-                  style={styles.numberButton}
+                  style={[styles.numberButton, saving && styles.disabledButton]}
                   onPress={() => setLevel(Math.max(1, level - 1))}
+                  disabled={saving}
                 >
-                  <Minus size={16} color="#666" />
+                  <Minus size={16} color={saving ? "#BDC3C7" : "#666"} />
                 </TouchableOpacity>
                 <Text style={styles.numberValue}>{level}</Text>
                 <TouchableOpacity
-                  style={styles.numberButton}
+                  style={[styles.numberButton, saving && styles.disabledButton]}
                   onPress={() => setLevel(Math.min(20, level + 1))}
+                  disabled={saving}
                 >
-                  <Plus size={16} color="#666" />
+                  <Plus size={16} color={saving ? "#BDC3C7" : "#666"} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -400,17 +523,19 @@ export default function EditCharacterScreen() {
               <Text style={styles.inputLabel}>HP Atual</Text>
               <View style={styles.numberInputContainer}>
                 <TouchableOpacity
-                  style={styles.numberButton}
+                  style={[styles.numberButton, saving && styles.disabledButton]}
                   onPress={() => setHpCurrent(Math.max(0, hpCurrent - 1))}
+                  disabled={saving}
                 >
-                  <Minus size={16} color="#666" />
+                  <Minus size={16} color={saving ? "#BDC3C7" : "#666"} />
                 </TouchableOpacity>
                 <Text style={styles.numberValue}>{hpCurrent}</Text>
                 <TouchableOpacity
-                  style={styles.numberButton}
+                  style={[styles.numberButton, saving && styles.disabledButton]}
                   onPress={() => setHpCurrent(Math.min(hpMax, hpCurrent + 1))}
+                  disabled={saving}
                 >
-                  <Plus size={16} color="#666" />
+                  <Plus size={16} color={saving ? "#BDC3C7" : "#666"} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -419,17 +544,19 @@ export default function EditCharacterScreen() {
               <Text style={styles.inputLabel}>HP Máximo</Text>
               <View style={styles.numberInputContainer}>
                 <TouchableOpacity
-                  style={styles.numberButton}
+                  style={[styles.numberButton, saving && styles.disabledButton]}
                   onPress={() => setHpMax(Math.max(1, hpMax - 1))}
+                  disabled={saving}
                 >
-                  <Minus size={16} color="#666" />
+                  <Minus size={16} color={saving ? "#BDC3C7" : "#666"} />
                 </TouchableOpacity>
                 <Text style={styles.numberValue}>{hpMax}</Text>
                 <TouchableOpacity
-                  style={styles.numberButton}
+                  style={[styles.numberButton, saving && styles.disabledButton]}
                   onPress={() => setHpMax(hpMax + 1)}
+                  disabled={saving}
                 >
-                  <Plus size={16} color="#666" />
+                  <Plus size={16} color={saving ? "#BDC3C7" : "#666"} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -456,10 +583,11 @@ export default function EditCharacterScreen() {
                 
                 <View style={styles.statControls}>
                   <TouchableOpacity
-                    style={styles.statButton}
+                    style={[styles.statButton, saving && styles.disabledButton]}
                     onPress={() => adjustStat(stat as keyof CharacterStats, -1)}
+                    disabled={saving}
                   >
-                    <Minus size={12} color="#666" />
+                    <Minus size={12} color={saving ? "#BDC3C7" : "#666"} />
                   </TouchableOpacity>
                   
                   <View style={styles.statValueContainer}>
@@ -470,10 +598,11 @@ export default function EditCharacterScreen() {
                   </View>
                   
                   <TouchableOpacity
-                    style={styles.statButton}
+                    style={[styles.statButton, saving && styles.disabledButton]}
                     onPress={() => adjustStat(stat as keyof CharacterStats, 1)}
+                    disabled={saving}
                   >
-                    <Plus size={12} color="#666" />
+                    <Plus size={12} color={saving ? "#BDC3C7" : "#666"} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -510,6 +639,7 @@ export default function EditCharacterScreen() {
                       onValueChange={() => toggleSkillProficiency(skill.name)}
                       trackColor={{ false: '#E8E8E8', true: '#D4AF37' }}
                       thumbColor={skill.proficient ? '#FFFFFF' : '#FFFFFF'}
+                      disabled={saving}
                     />
                   </View>
                   
@@ -520,7 +650,7 @@ export default function EditCharacterScreen() {
                       onValueChange={() => toggleSkillExpertise(skill.name)}
                       trackColor={{ false: '#E8E8E8', true: '#8E44AD' }}
                       thumbColor={skill.expertise ? '#FFFFFF' : '#FFFFFF'}
-                      disabled={!skill.proficient}
+                      disabled={!skill.proficient || saving}
                     />
                   </View>
                 </View>
@@ -547,17 +677,19 @@ export default function EditCharacterScreen() {
                       <Text style={styles.spellSlotLabel}>Atual:</Text>
                       <View style={styles.numberInputContainer}>
                         <TouchableOpacity
-                          style={styles.numberButton}
+                          style={[styles.numberButton, saving && styles.disabledButton]}
                           onPress={() => adjustSpellSlot(level, 'current', -1)}
+                          disabled={saving}
                         >
-                          <Minus size={12} color="#666" />
+                          <Minus size={12} color={saving ? "#BDC3C7" : "#666"} />
                         </TouchableOpacity>
                         <Text style={styles.numberValue}>{slots[0]}</Text>
                         <TouchableOpacity
-                          style={styles.numberButton}
+                          style={[styles.numberButton, saving && styles.disabledButton]}
                           onPress={() => adjustSpellSlot(level, 'current', 1)}
+                          disabled={saving}
                         >
-                          <Plus size={12} color="#666" />
+                          <Plus size={12} color={saving ? "#BDC3C7" : "#666"} />
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -566,17 +698,19 @@ export default function EditCharacterScreen() {
                       <Text style={styles.spellSlotLabel}>Máximo:</Text>
                       <View style={styles.numberInputContainer}>
                         <TouchableOpacity
-                          style={styles.numberButton}
+                          style={[styles.numberButton, saving && styles.disabledButton]}
                           onPress={() => adjustSpellSlot(level, 'max', -1)}
+                          disabled={saving}
                         >
-                          <Minus size={12} color="#666" />
+                          <Minus size={12} color={saving ? "#BDC3C7" : "#666"} />
                         </TouchableOpacity>
                         <Text style={styles.numberValue}>{slots[1]}</Text>
                         <TouchableOpacity
-                          style={styles.numberButton}
+                          style={[styles.numberButton, saving && styles.disabledButton]}
                           onPress={() => adjustSpellSlot(level, 'max', 1)}
+                          disabled={saving}
                         >
-                          <Plus size={12} color="#666" />
+                          <Plus size={12} color={saving ? "#BDC3C7" : "#666"} />
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -600,10 +734,11 @@ export default function EditCharacterScreen() {
                 <View key={index} style={styles.knownSpellItem}>
                   <Text style={styles.knownSpellName}>{spellName}</Text>
                   <TouchableOpacity
-                    style={styles.removeSpellButton}
+                    style={[styles.removeSpellButton, saving && styles.disabledButton]}
                     onPress={() => removeSpell(spellName)}
+                    disabled={saving}
                   >
-                    <Trash2 size={16} color="#E74C3C" />
+                    <Trash2 size={16} color={saving ? "#BDC3C7" : "#E74C3C"} />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -620,8 +755,9 @@ export default function EditCharacterScreen() {
                       .map((spell) => (
                         <TouchableOpacity
                           key={spell.id}
-                          style={styles.availableSpellItem}
+                          style={[styles.availableSpellItem, saving && styles.disabledButton]}
                           onPress={() => addSpell(spell.name)}
+                          disabled={saving}
                         >
                           <Text style={styles.availableSpellName}>{spell.name}</Text>
                           <Text style={styles.availableSpellLevel}>Nv. {spell.level}</Text>
@@ -684,6 +820,26 @@ const styles = StyleSheet.create({
   },
   saveButtonDisabled: {
     backgroundColor: '#95A5A6',
+  },
+  savingIndicator: {
+    backgroundColor: '#FFF3CD',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FFEAA7',
+  },
+  savingText: {
+    textAlign: 'center',
+    color: '#856404',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  disabledInput: {
+    backgroundColor: '#F5F5F5',
+    color: '#999',
   },
   content: {
     flex: 1,
