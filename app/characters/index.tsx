@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Character } from '@/types/database';
+import { Spell } from '@/types/spell';
 import { CharacterCard } from '@/components/CharacterCard';
 import { CharacterDetailModal } from '@/components/CharacterDetailModal';
+import { ClassDetailModal } from '@/components/ClassDetailModal';
 import { supabase } from '@/lib/supabase';
-import { Shield, User, Plus, RefreshCw, ArrowLeft, Users, UserPlus } from 'lucide-react-native';
+import { Shield, User, Plus, RefreshCw, ArrowLeft, Users, UserPlus, BookOpen } from 'lucide-react-native';
 import { router } from 'expo-router';
+import classesData from '@/data/classes.json';
 
 export default function CharactersScreen() {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
+  const [selectedClass, setSelectedClass] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -25,8 +29,6 @@ export default function CharactersScreen() {
     if (user) {
       loadCharacters();
     } else {
-      // For demo purposes, we'll create a mock user session
-      // In a real app, you'd implement proper authentication
       setLoading(false);
     }
   };
@@ -144,6 +146,91 @@ export default function CharactersScreen() {
     } catch (error) {
       console.error('Error revoking token:', error);
       throw error;
+    }
+  };
+
+  const handleAddSpellsToGrimoire = async (spells: Spell[]) => {
+    if (!selectedCharacter) {
+      Alert.alert('Erro', 'Nenhum personagem selecionado.');
+      return;
+    }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        Alert.alert('Erro', 'Você precisa estar autenticado.');
+        return;
+      }
+
+      // Get current spells known
+      const currentSpells = selectedCharacter.spells_known || [];
+      
+      // Convert current spells to consistent format
+      const currentSpellNames = currentSpells.map((spell: any) => 
+        typeof spell === 'string' ? spell : spell.name
+      );
+
+      // Filter out spells that are already known
+      const newSpells = spells.filter(spell => 
+        !currentSpellNames.includes(spell.name)
+      );
+
+      if (newSpells.length === 0) {
+        Alert.alert('Aviso', 'Todas as magias selecionadas já estão no grimório do personagem.');
+        return;
+      }
+
+      // Convert new spells to the format expected by the database
+      const spellsToAdd = newSpells.map(spell => ({
+        name: spell.name,
+        level: spell.level
+      }));
+
+      // Combine current spells with new spells
+      const updatedSpells = [...currentSpells, ...spellsToAdd];
+
+      // Update character
+      const response = await fetch(`/api/characters/${selectedCharacter.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          spells_known: updatedSpells,
+        }),
+      });
+
+      if (response.ok) {
+        const updatedCharacter = await response.json();
+        
+        // Update local state
+        setCharacters(prev => prev.map(char => 
+          char.id === selectedCharacter.id ? updatedCharacter : char
+        ));
+        
+        setSelectedCharacter(updatedCharacter);
+        
+        Alert.alert(
+          'Sucesso', 
+          `${newSpells.length} magia(s) adicionada(s) ao grimório de ${selectedCharacter.name}!`
+        );
+      } else {
+        const errorText = await response.text();
+        console.error('Error updating character:', errorText);
+        Alert.alert('Erro', 'Não foi possível adicionar as magias ao grimório.');
+      }
+    } catch (error) {
+      console.error('Error adding spells to grimoire:', error);
+      Alert.alert('Erro', 'Erro ao adicionar magias ao grimório.');
+    }
+  };
+
+  const openClassModal = (className: string) => {
+    const dndClass = classesData.find(cls => cls.name === className);
+    if (dndClass) {
+      setSelectedClass(dndClass);
     }
   };
 
@@ -327,12 +414,28 @@ export default function CharactersScreen() {
         {characters.length > 0 ? (
           <View style={styles.charactersContainer}>
             {characters.map((character) => (
-              <CharacterCard
-                key={character.id}
-                character={character}
-                onPress={() => setSelectedCharacter(character)}
-                onShare={() => setSelectedCharacter(character)}
-              />
+              <View key={character.id} style={styles.characterCardWrapper}>
+                <CharacterCard
+                  character={character}
+                  onPress={() => setSelectedCharacter(character)}
+                  onShare={() => setSelectedCharacter(character)}
+                />
+                
+                {/* Botão para adicionar magias ao grimório */}
+                {character.class_name && classesData.find(cls => cls.name === character.class_name)?.spellcasting && (
+                  <TouchableOpacity
+                    style={styles.addSpellsButton}
+                    onPress={() => {
+                      setSelectedCharacter(character);
+                      openClassModal(character.class_name);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <BookOpen size={16} color="#8E44AD" />
+                    <Text style={styles.addSpellsButtonText}>Adicionar Magias</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             ))}
           </View>
         ) : (
@@ -360,10 +463,17 @@ export default function CharactersScreen() {
 
       <CharacterDetailModal
         character={selectedCharacter}
-        visible={!!selectedCharacter}
+        visible={!!selectedCharacter && !selectedClass}
         onClose={() => setSelectedCharacter(null)}
         onGenerateToken={handleGenerateToken}
         onRevokeToken={handleRevokeToken}
+      />
+
+      <ClassDetailModal
+        dndClass={selectedClass}
+        visible={!!selectedClass}
+        onClose={() => setSelectedClass(null)}
+        onAddSpellsToGrimoire={handleAddSpellsToGrimoire}
       />
     </SafeAreaView>
   );
@@ -465,6 +575,29 @@ const styles = StyleSheet.create({
   },
   charactersContainer: {
     paddingVertical: 8,
+  },
+  characterCardWrapper: {
+    marginBottom: 8,
+  },
+  addSpellsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3E8FF',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginHorizontal: 16,
+    marginTop: -8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E0B3FF',
+    gap: 6,
+  },
+  addSpellsButtonText: {
+    color: '#8E44AD',
+    fontSize: 14,
+    fontWeight: '600',
   },
   emptyContainer: {
     flex: 1,
