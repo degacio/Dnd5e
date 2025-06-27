@@ -8,7 +8,8 @@ import {
   TouchableOpacity, 
   Alert,
   Platform,
-  Modal
+  Modal,
+  Dimensions
 } from 'react-native';
 import { 
   Settings, 
@@ -27,12 +28,23 @@ import { adaptSpellsFromLivroDoJogador } from '@/utils/spellAdapter';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
 export default function SettingsTab() {
   const [spellsFileLoaded, setSpellsFileLoaded] = useState(false);
   const [classesFileLoaded, setClassesFileLoaded] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [dimensions, setDimensions] = useState(Dimensions.get('window'));
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setDimensions(window);
+    });
+
+    return () => subscription?.remove();
+  }, []);
 
   useEffect(() => {
     console.log('🔄 SettingsTab mounted, getting user info...');
@@ -378,42 +390,62 @@ export default function SettingsTab() {
     }
   };
 
+  // Determine if we're on a small screen
+  const isSmallScreen = dimensions.width < 768;
+  const isVerySmallScreen = dimensions.width < 480;
+
   console.log('🎨 Rendering SettingsTab with state:', {
     userEmail,
     isLoggingOut,
     spellsFileLoaded,
     classesFileLoaded,
-    showLogoutModal
+    showLogoutModal,
+    screenDimensions: dimensions,
+    isSmallScreen,
+    isVerySmallScreen
   });
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, isVerySmallScreen && styles.headerCompact]}>
         <View style={styles.titleContainer}>
-          <Settings size={28} color="#D4AF37" />
-          <Text style={styles.title}>Configurações</Text>
+          <Settings size={isVerySmallScreen ? 24 : 28} color="#D4AF37" />
+          <Text style={[styles.title, isVerySmallScreen && styles.titleSmall]}>Configurações</Text>
         </View>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.subtitle, isVerySmallScreen && styles.subtitleSmall]}>
           Gerencie seus dados personalizados
         </Text>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: 100 } // Extra padding to ensure all content is accessible
+        ]}
+      >
         {/* Seção de Conta */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Conta</Text>
+        <View style={[styles.section, isSmallScreen && styles.sectionCompact]}>
+          <Text style={[styles.sectionTitle, isVerySmallScreen && styles.sectionTitleSmall]}>Conta</Text>
           
           <View style={styles.accountCard}>
-            <View style={styles.accountHeader}>
-              <User size={24} color="#27AE60" />
+            <View style={[styles.accountHeader, isVerySmallScreen && styles.accountHeaderCompact]}>
+              <User size={isVerySmallScreen ? 20 : 24} color="#27AE60" />
               <View style={styles.accountInfo}>
-                <Text style={styles.accountLabel}>Usuário logado</Text>
-                <Text style={styles.accountEmail}>{userEmail || 'Carregando...'}</Text>
+                <Text style={[styles.accountLabel, isVerySmallScreen && styles.accountLabelSmall]}>Usuário logado</Text>
+                <Text style={[styles.accountEmail, isVerySmallScreen && styles.accountEmailSmall]} numberOfLines={1}>
+                  {userEmail || 'Carregando...'}
+                </Text>
               </View>
             </View>
             
             <TouchableOpacity 
-              style={[styles.logoutButton, isLoggingOut && styles.logoutButtonDisabled]} 
+              style={[
+                styles.logoutButton, 
+                isLoggingOut && styles.logoutButtonDisabled,
+                isVerySmallScreen && styles.logoutButtonCompact
+              ]} 
               onPress={() => {
                 console.log('🎯 Logout button pressed!');
                 console.log('📊 Button state - disabled:', isLoggingOut);
@@ -427,8 +459,12 @@ export default function SettingsTab() {
               disabled={isLoggingOut}
               activeOpacity={0.7}
             >
-              <LogOut size={16} color={isLoggingOut ? "#BDC3C7" : "#E74C3C"} />
-              <Text style={[styles.logoutButtonText, isLoggingOut && styles.logoutButtonTextDisabled]}>
+              <LogOut size={isVerySmallScreen ? 14 : 16} color={isLoggingOut ? "#BDC3C7" : "#E74C3C"} />
+              <Text style={[
+                styles.logoutButtonText, 
+                isLoggingOut && styles.logoutButtonTextDisabled,
+                isVerySmallScreen && styles.logoutButtonTextSmall
+              ]}>
                 {isLoggingOut ? 'Saindo...' : 'Sair da Conta'}
               </Text>
             </TouchableOpacity>
@@ -436,89 +472,118 @@ export default function SettingsTab() {
         </View>
 
         {/* Seção de Arquivos */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Gerenciar Arquivos</Text>
+        <View style={[styles.section, isSmallScreen && styles.sectionCompact]}>
+          <Text style={[styles.sectionTitle, isVerySmallScreen && styles.sectionTitleSmall]}>Gerenciar Arquivos</Text>
           
           {/* Magias */}
           <View style={styles.fileCard}>
-            <View style={styles.fileHeader}>
-              <BookOpen size={24} color="#8E44AD" />
+            <View style={[styles.fileHeader, isVerySmallScreen && styles.fileHeaderCompact]}>
+              <BookOpen size={isVerySmallScreen ? 20 : 24} color="#8E44AD" />
               <View style={styles.fileInfo}>
-                <Text style={styles.fileName}>Arquivo de Magias</Text>
-                <Text style={styles.fileStatus}>
+                <Text style={[styles.fileName, isVerySmallScreen && styles.fileNameSmall]}>Arquivo de Magias</Text>
+                <Text style={[styles.fileStatus, isVerySmallScreen && styles.fileStatusSmall]}>
                   {spellsFileLoaded ? 'Arquivo personalizado carregado' : 'Usando arquivo padrão'}
                 </Text>
               </View>
             </View>
             
             <View style={styles.fileActions}>
-              <TouchableOpacity style={styles.actionButton} onPress={pickSpellsFile}>
-                <Upload size={16} color="#FFFFFF" />
-                <Text style={styles.actionButtonText}>Carregar</Text>
+              <TouchableOpacity 
+                style={[styles.actionButton, isVerySmallScreen && styles.actionButtonCompact]} 
+                onPress={pickSpellsFile}
+              >
+                <Upload size={isVerySmallScreen ? 14 : 16} color="#FFFFFF" />
+                <Text style={[styles.actionButtonText, isVerySmallScreen && styles.actionButtonTextSmall]}>
+                  Carregar
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
 
           {/* Classes */}
           <View style={styles.fileCard}>
-            <View style={styles.fileHeader}>
-              <Users size={24} color="#E74C3C" />
+            <View style={[styles.fileHeader, isVerySmallScreen && styles.fileHeaderCompact]}>
+              <Users size={isVerySmallScreen ? 20 : 24} color="#E74C3C" />
               <View style={styles.fileInfo}>
-                <Text style={styles.fileName}>Arquivo de Classes</Text>
-                <Text style={styles.fileStatus}>
+                <Text style={[styles.fileName, isVerySmallScreen && styles.fileNameSmall]}>Arquivo de Classes</Text>
+                <Text style={[styles.fileStatus, isVerySmallScreen && styles.fileStatusSmall]}>
                   {classesFileLoaded ? 'Arquivo personalizado carregado' : 'Usando arquivo padrão'}
                 </Text>
               </View>
             </View>
             
             <View style={styles.fileActions}>
-              <TouchableOpacity style={styles.actionButton} onPress={pickClassesFile}>
-                <Upload size={16} color="#FFFFFF" />
-                <Text style={styles.actionButtonText}>Carregar</Text>
+              <TouchableOpacity 
+                style={[styles.actionButton, isVerySmallScreen && styles.actionButtonCompact]} 
+                onPress={pickClassesFile}
+              >
+                <Upload size={isVerySmallScreen ? 14 : 16} color="#FFFFFF" />
+                <Text style={[styles.actionButtonText, isVerySmallScreen && styles.actionButtonTextSmall]}>
+                  Carregar
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
 
         {/* Seção de Ações */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ações</Text>
+        <View style={[styles.section, isSmallScreen && styles.sectionCompact]}>
+          <Text style={[styles.sectionTitle, isVerySmallScreen && styles.sectionTitleSmall]}>Ações</Text>
           
-          <TouchableOpacity style={styles.menuItem} onPress={exportData}>
-            <Download size={20} color="#27AE60" />
-            <Text style={styles.menuItemText}>Exportar Dados</Text>
+          <TouchableOpacity 
+            style={[styles.menuItem, isVerySmallScreen && styles.menuItemCompact]} 
+            onPress={exportData}
+          >
+            <Download size={isVerySmallScreen ? 18 : 20} color="#27AE60" />
+            <Text style={[styles.menuItemText, isVerySmallScreen && styles.menuItemTextSmall]}>
+              Exportar Dados
+            </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={clearData}>
-            <Trash2 size={20} color="#E74C3C" />
-            <Text style={styles.menuItemText}>Limpar Dados Personalizados</Text>
+          <TouchableOpacity 
+            style={[styles.menuItem, isVerySmallScreen && styles.menuItemCompact]} 
+            onPress={clearData}
+          >
+            <Trash2 size={isVerySmallScreen ? 18 : 20} color="#E74C3C" />
+            <Text style={[styles.menuItemText, isVerySmallScreen && styles.menuItemTextSmall]}>
+              Limpar Dados Personalizados
+            </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={showInfo}>
-            <Info size={20} color="#3498DB" />
-            <Text style={styles.menuItemText}>Sobre Arquivos JSON</Text>
+          <TouchableOpacity 
+            style={[styles.menuItem, isVerySmallScreen && styles.menuItemCompact]} 
+            onPress={showInfo}
+          >
+            <Info size={isVerySmallScreen ? 18 : 20} color="#3498DB" />
+            <Text style={[styles.menuItemText, isVerySmallScreen && styles.menuItemTextSmall]}>
+              Sobre Arquivos JSON
+            </Text>
           </TouchableOpacity>
         </View>
 
         {/* Seção de Informações */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Informações</Text>
+        <View style={[styles.section, isSmallScreen && styles.sectionCompact]}>
+          <Text style={[styles.sectionTitle, isVerySmallScreen && styles.sectionTitleSmall]}>Informações</Text>
           
-          <View style={styles.infoCard}>
-            <FileText size={20} color="#666" />
+          <View style={[styles.infoCard, isVerySmallScreen && styles.infoCardCompact]}>
+            <FileText size={isVerySmallScreen ? 18 : 20} color="#666" />
             <View style={styles.infoContent}>
-              <Text style={styles.infoTitle}>Formato dos Arquivos</Text>
-              <Text style={styles.infoDescription}>
+              <Text style={[styles.infoTitle, isVerySmallScreen && styles.infoTitleSmall]}>
+                Formato dos Arquivos
+              </Text>
+              <Text style={[styles.infoDescription, isVerySmallScreen && styles.infoDescriptionSmall]}>
                 Os arquivos devem estar no formato JSON e seguir a estrutura específica do aplicativo.
               </Text>
             </View>
           </View>
 
-          <View style={styles.infoCard}>
-            <Upload size={20} color="#666" />
+          <View style={[styles.infoCard, isVerySmallScreen && styles.infoCardCompact]}>
+            <Upload size={isVerySmallScreen ? 18 : 20} color="#666" />
             <View style={styles.infoContent}>
-              <Text style={styles.infoTitle}>Como Usar</Text>
-              <Text style={styles.infoDescription}>
+              <Text style={[styles.infoTitle, isVerySmallScreen && styles.infoTitleSmall]}>
+                Como Usar
+              </Text>
+              <Text style={[styles.infoDescription, isVerySmallScreen && styles.infoDescriptionSmall]}>
                 Toque em "Carregar" para selecionar um arquivo JSON do seu dispositivo. O arquivo será validado antes de ser aplicado.
               </Text>
             </View>
@@ -534,31 +599,49 @@ export default function SettingsTab() {
         onRequestClose={cancelLogout}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+          <View style={[
+            styles.modalContainer,
+            isSmallScreen && styles.modalContainerSmall,
+            isVerySmallScreen && styles.modalContainerVerySmall
+          ]}>
             <View style={styles.modalHeader}>
-              <LogOut size={24} color="#E74C3C" />
-              <Text style={styles.modalTitle}>Sair da Conta</Text>
+              <LogOut size={isVerySmallScreen ? 20 : 24} color="#E74C3C" />
+              <Text style={[styles.modalTitle, isVerySmallScreen && styles.modalTitleSmall]}>
+                Sair da Conta
+              </Text>
             </View>
             
-            <Text style={styles.modalMessage}>
+            <Text style={[styles.modalMessage, isVerySmallScreen && styles.modalMessageSmall]}>
               Tem certeza que deseja sair? Você precisará fazer login novamente para acessar seus personagens.
             </Text>
             
-            <View style={styles.modalButtons}>
+            <View style={[styles.modalButtons, isVerySmallScreen && styles.modalButtonsCompact]}>
               <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]} 
+                style={[
+                  styles.modalButton, 
+                  styles.cancelButton,
+                  isVerySmallScreen && styles.modalButtonCompact
+                ]} 
                 onPress={cancelLogout}
                 activeOpacity={0.8}
               >
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
+                <Text style={[styles.cancelButtonText, isVerySmallScreen && styles.cancelButtonTextSmall]}>
+                  Cancelar
+                </Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={[styles.modalButton, styles.confirmButton]} 
+                style={[
+                  styles.modalButton, 
+                  styles.confirmButton,
+                  isVerySmallScreen && styles.modalButtonCompact
+                ]} 
                 onPress={confirmLogout}
                 activeOpacity={0.8}
               >
-                <Text style={styles.confirmButtonText}>Sair</Text>
+                <Text style={[styles.confirmButtonText, isVerySmallScreen && styles.confirmButtonTextSmall]}>
+                  Sair
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -580,6 +663,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 3,
     borderBottomColor: '#D4AF37',
   },
+  headerCompact: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
   titleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -591,23 +678,41 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginLeft: 12,
   },
+  titleSmall: {
+    fontSize: 20,
+    marginLeft: 8,
+  },
   subtitle: {
     fontSize: 14,
     color: '#D4AF37',
     fontWeight: '500',
   },
+  subtitleSmall: {
+    fontSize: 12,
+  },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   section: {
     margin: 16,
     marginBottom: 24,
+  },
+  sectionCompact: {
+    margin: 12,
+    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#333',
     marginBottom: 16,
+  },
+  sectionTitleSmall: {
+    fontSize: 16,
+    marginBottom: 12,
   },
   accountCard: {
     backgroundColor: '#FFFFFF',
@@ -625,6 +730,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  accountHeaderCompact: {
+    marginBottom: 12,
+  },
   accountInfo: {
     flex: 1,
     marginLeft: 12,
@@ -635,9 +743,15 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 2,
   },
+  accountLabelSmall: {
+    fontSize: 12,
+  },
   accountEmail: {
     fontSize: 14,
     color: '#666',
+  },
+  accountEmailSmall: {
+    fontSize: 12,
   },
   logoutButton: {
     flexDirection: 'row',
@@ -650,6 +764,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FECACA',
     gap: 8,
+    minHeight: 44, // Ensure minimum touch target
+  },
+  logoutButtonCompact: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 6,
   },
   logoutButtonDisabled: {
     backgroundColor: '#F5F5F5',
@@ -659,6 +779,9 @@ const styles = StyleSheet.create({
     color: '#E74C3C',
     fontSize: 14,
     fontWeight: '600',
+  },
+  logoutButtonTextSmall: {
+    fontSize: 12,
   },
   logoutButtonTextDisabled: {
     color: '#BDC3C7',
@@ -679,6 +802,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  fileHeaderCompact: {
+    marginBottom: 10,
+  },
   fileInfo: {
     flex: 1,
     marginLeft: 12,
@@ -689,9 +815,15 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 2,
   },
+  fileNameSmall: {
+    fontSize: 14,
+  },
   fileStatus: {
     fontSize: 12,
     color: '#666',
+  },
+  fileStatusSmall: {
+    fontSize: 11,
   },
   fileActions: {
     flexDirection: 'row',
@@ -704,12 +836,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
+    minHeight: 36,
+  },
+  actionButtonCompact: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    minHeight: 32,
   },
   actionButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 4,
+  },
+  actionButtonTextSmall: {
+    fontSize: 12,
+    marginLeft: 3,
   },
   menuItem: {
     flexDirection: 'row',
@@ -723,12 +865,23 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
+    minHeight: 56,
+  },
+  menuItemCompact: {
+    padding: 12,
+    marginBottom: 6,
+    minHeight: 48,
   },
   menuItemText: {
     fontSize: 16,
     color: '#333',
     marginLeft: 12,
     fontWeight: '500',
+    flexShrink: 1,
+  },
+  menuItemTextSmall: {
+    fontSize: 14,
+    marginLeft: 10,
   },
   infoCard: {
     flexDirection: 'row',
@@ -742,6 +895,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
+  infoCardCompact: {
+    padding: 12,
+    marginBottom: 6,
+  },
   infoContent: {
     flex: 1,
     marginLeft: 12,
@@ -752,10 +909,18 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 4,
   },
+  infoTitleSmall: {
+    fontSize: 12,
+    marginBottom: 3,
+  },
   infoDescription: {
     fontSize: 12,
     color: '#666',
     lineHeight: 16,
+  },
+  infoDescriptionSmall: {
+    fontSize: 11,
+    lineHeight: 14,
   },
   // Modal styles
   modalOverlay: {
@@ -777,6 +942,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 10,
   },
+  modalContainerSmall: {
+    padding: 20,
+    maxWidth: 350,
+  },
+  modalContainerVerySmall: {
+    padding: 16,
+    maxWidth: 300,
+    margin: 16,
+  },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -788,15 +962,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#333',
   },
+  modalTitleSmall: {
+    fontSize: 18,
+  },
   modalMessage: {
     fontSize: 16,
     color: '#666',
     lineHeight: 24,
     marginBottom: 24,
   },
+  modalMessageSmall: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 20,
+  },
   modalButtons: {
     flexDirection: 'row',
     gap: 12,
+  },
+  modalButtonsCompact: {
+    gap: 8,
   },
   modalButton: {
     flex: 1,
@@ -804,6 +989,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     alignItems: 'center',
+    minHeight: 44,
+  },
+  modalButtonCompact: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    minHeight: 40,
   },
   cancelButton: {
     backgroundColor: '#F8F9FA',
@@ -818,9 +1009,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#666',
   },
+  cancelButtonTextSmall: {
+    fontSize: 14,
+  },
   confirmButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  confirmButtonTextSmall: {
+    fontSize: 14,
   },
 });
