@@ -218,11 +218,22 @@ export default function CharactersScreen() {
   };
 
   const navigateToClasses = () => {
-    router.push('/characters/classes');
+    try {
+      router.push('/characters/classes');
+    } catch (error) {
+      console.error('Error navigating to classes:', error);
+      Alert.alert('Erro', 'Não foi possível navegar para a página de classes.');
+    }
   };
 
   const navigateToCreateCharacter = () => {
-    router.push('/characters/create');
+    try {
+      console.log('Navigating to create character...');
+      router.push('/characters/create');
+    } catch (error) {
+      console.error('Error navigating to create character:', error);
+      Alert.alert('Erro', 'Não foi possível navegar para a criação de personagem.');
+    }
   };
 
   if (loading) {
@@ -272,7 +283,7 @@ export default function CharactersScreen() {
         <TouchableOpacity 
           style={styles.navButton}
           onPress={navigateToClasses}
-          activeOpacity={0.8}
+          activeOpacity={0.7}
         >
           <Users size={24} color="#D4AF37" />
           <Text style={styles.navButtonText}>Ver Classes D&D</Text>
@@ -281,7 +292,7 @@ export default function CharactersScreen() {
         <TouchableOpacity 
           style={[styles.navButton, styles.createNavButton]}
           onPress={navigateToCreateCharacter}
-          activeOpacity={0.8}
+          activeOpacity={0.7}
         >
           <UserPlus size={24} color="#FFFFFF" />
           <Text style={[styles.navButtonText, styles.createNavButtonText]}>Criar Novo Personagem</Text>
@@ -311,6 +322,7 @@ export default function CharactersScreen() {
             <TouchableOpacity 
               style={styles.createButton}
               onPress={navigateToCreateCharacter}
+              activeOpacity={0.7}
             >
               <UserPlus size={20} color="#FFFFFF" />
               <Text style={styles.createButtonText}>Criar Meu Primeiro Personagem</Text>
