@@ -31,6 +31,13 @@ export function AuthGuard({ children }: AuthGuardProps) {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Handle navigation when authentication status changes
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.replace('/auth');
+    }
+  }, [isAuthenticated, loading]);
+
   const checkAuthStatus = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -55,8 +62,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
   }
 
   if (!isAuthenticated) {
-    // Redirect to auth screen
-    router.replace('/auth');
     return (
       <View style={styles.loadingContainer}>
         <Shield size={48} color="#D4AF37" />
