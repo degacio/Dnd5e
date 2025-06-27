@@ -148,14 +148,18 @@ export default function CharactersScreen() {
   };
 
   const createSampleCharacter = async () => {
+    console.log('🎯 createSampleCharacter called');
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('📋 Session check:', session ? 'Session exists' : 'No session');
       
       if (!session) {
+        console.log('❌ No session found');
         Alert.alert('Erro', 'Você precisa estar autenticado para criar personagens.');
         return;
       }
 
+      console.log('🏗️ Creating sample character...');
       const sampleCharacter = {
         name: 'Gandalf o Cinzento',
         class_name: 'Mago',
@@ -191,6 +195,7 @@ export default function CharactersScreen() {
         }
       };
 
+      console.log('📤 Making API request to /api/characters');
       const response = await fetch('/api/characters', {
         method: 'POST',
         headers: {
@@ -200,39 +205,50 @@ export default function CharactersScreen() {
         body: JSON.stringify(sampleCharacter),
       });
 
+      console.log('📥 API Response status:', response.status);
+      console.log('📥 API Response ok:', response.ok);
+
       if (response.ok) {
         const newCharacter = await response.json();
+        console.log('✅ Character created successfully:', newCharacter.name);
         setCharacters(prev => [newCharacter, ...prev]);
         Alert.alert('Sucesso', 'Personagem de exemplo criado!');
       } else {
+        const errorText = await response.text();
+        console.log('❌ API Error response:', errorText);
         Alert.alert('Erro', 'Não foi possível criar o personagem.');
       }
     } catch (error) {
-      console.error('Error creating character:', error);
+      console.error('💥 Error creating character:', error);
       Alert.alert('Erro', 'Erro ao criar personagem.');
     }
   };
 
   const goBack = () => {
+    console.log('🔙 Going back...');
     router.back();
   };
 
   const navigateToClasses = () => {
-    console.log('Navigating to classes...');
+    console.log('🎓 Navigating to classes...');
     try {
       router.push('/characters/classes');
     } catch (error) {
-      console.error('Error navigating to classes:', error);
+      console.error('💥 Error navigating to classes:', error);
       Alert.alert('Erro', 'Não foi possível navegar para a página de classes.');
     }
   };
 
   const navigateToCreateCharacter = () => {
-    console.log('Navigating to create character...');
+    console.log('🆕 navigateToCreateCharacter function called');
+    console.log('🆕 Current router state:', router);
+    
     try {
+      console.log('🆕 Attempting to navigate to /characters/create');
       router.push('/characters/create');
+      console.log('✅ Navigation command executed');
     } catch (error) {
-      console.error('Error navigating to create character:', error);
+      console.error('💥 Error navigating to create character:', error);
       Alert.alert('Erro', 'Não foi possível navegar para a criação de personagem.');
     }
   };
@@ -272,7 +288,10 @@ export default function CharactersScreen() {
           
           <TouchableOpacity 
             style={styles.headerButton}
-            onPress={createSampleCharacter}
+            onPress={() => {
+              console.log('➕ Sample character button pressed');
+              createSampleCharacter();
+            }}
           >
             <Plus size={20} color="#D4AF37" />
           </TouchableOpacity>
@@ -292,7 +311,11 @@ export default function CharactersScreen() {
 
         <TouchableOpacity 
           style={[styles.navButton, styles.createNavButton]}
-          onPress={navigateToCreateCharacter}
+          onPress={() => {
+            console.log('🎯 Create character button pressed!');
+            console.log('🎯 Button onPress triggered');
+            navigateToCreateCharacter();
+          }}
           activeOpacity={0.7}
         >
           <UserPlus size={24} color="#FFFFFF" />
@@ -322,7 +345,10 @@ export default function CharactersScreen() {
             
             <TouchableOpacity 
               style={styles.createButton}
-              onPress={navigateToCreateCharacter}
+              onPress={() => {
+                console.log('🎯 Empty state create button pressed!');
+                navigateToCreateCharacter();
+              }}
               activeOpacity={0.7}
             >
               <UserPlus size={20} color="#FFFFFF" />

@@ -62,6 +62,8 @@ const BACKGROUNDS = [
 ];
 
 export default function CreateCharacterScreen() {
+  console.log('🎬 CreateCharacterScreen component rendered');
+  
   const [step, setStep] = useState(1);
   const [classes, setClasses] = useState<DnDClass[]>([]);
   const [races, setRaces] = useState<Race[]>([]);
@@ -90,6 +92,7 @@ export default function CreateCharacterScreen() {
   });
 
   useEffect(() => {
+    console.log('🔄 useEffect triggered - loading data');
     loadData();
   }, []);
 
@@ -98,11 +101,15 @@ export default function CreateCharacterScreen() {
   }, [characterData.class, characterData.stats.constitution, characterData.level]);
 
   const loadData = async () => {
+    console.log('📚 Loading classes and races data...');
     try {
       setClasses(classesData);
       setRaces(racesData);
+      console.log('✅ Data loaded successfully');
+      console.log('📊 Classes loaded:', classesData.length);
+      console.log('📊 Races loaded:', racesData.length);
     } catch (error) {
-      console.error('Erro ao carregar dados:', error);
+      console.error('💥 Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -130,6 +137,7 @@ export default function CreateCharacterScreen() {
   };
 
   const rollStats = () => {
+    console.log('🎲 Rolling stats...');
     const rollStat = () => {
       // Roll 4d6, drop lowest
       const rolls = Array.from({ length: 4 }, () => Math.floor(Math.random() * 6) + 1);
@@ -137,16 +145,20 @@ export default function CreateCharacterScreen() {
       return rolls.slice(0, 3).reduce((sum, roll) => sum + roll, 0);
     };
 
+    const newStats = {
+      strength: rollStat(),
+      dexterity: rollStat(),
+      constitution: rollStat(),
+      intelligence: rollStat(),
+      wisdom: rollStat(),
+      charisma: rollStat(),
+    };
+
+    console.log('🎲 New stats rolled:', newStats);
+
     setCharacterData(prev => ({
       ...prev,
-      stats: {
-        strength: rollStat(),
-        dexterity: rollStat(),
-        constitution: rollStat(),
-        intelligence: rollStat(),
-        wisdom: rollStat(),
-        charisma: rollStat(),
-      },
+      stats: newStats,
     }));
   };
 
@@ -187,16 +199,24 @@ export default function CreateCharacterScreen() {
   };
 
   const saveCharacter = async () => {
+    console.log('💾 saveCharacter function called');
+    
     if (!characterData.race || !characterData.class) {
+      console.log('❌ Character data incomplete');
       Alert.alert('Erro', 'Dados do personagem incompletos.');
       return;
     }
 
     setSaving(true);
+    console.log('🔄 Setting saving state to true');
+    
     try {
+      console.log('🔐 Getting session...');
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('📋 Session check:', session ? 'Session exists' : 'No session');
       
       if (!session) {
+        console.log('❌ No session found');
         Alert.alert('Erro', 'Você precisa estar autenticado para criar personagens.');
         return;
       }
@@ -204,12 +224,14 @@ export default function CreateCharacterScreen() {
       // Calculate spell slots if the class is a spellcaster
       let spellSlots = {};
       if (characterData.class.spellcasting) {
+        console.log('✨ Character is a spellcaster, calculating spell slots...');
         const levelIndex = characterData.level - 1;
         Object.entries(characterData.class.spellcasting.spellSlots).forEach(([level, slots]) => {
           if (slots[levelIndex] > 0) {
             spellSlots[level] = [slots[levelIndex], slots[levelIndex]]; // [current, max]
           }
         });
+        console.log('✨ Spell slots calculated:', spellSlots);
       }
 
       const newCharacter = {
@@ -239,6 +261,9 @@ export default function CreateCharacterScreen() {
         },
       };
 
+      console.log('🏗️ Character object created:', newCharacter);
+      console.log('📤 Making API request to /api/characters');
+
       const response = await fetch('/api/characters', {
         method: 'POST',
         headers: {
@@ -248,33 +273,48 @@ export default function CreateCharacterScreen() {
         body: JSON.stringify(newCharacter),
       });
 
+      console.log('📥 API Response status:', response.status);
+      console.log('📥 API Response ok:', response.ok);
+
       if (response.ok) {
+        const createdCharacter = await response.json();
+        console.log('✅ Character created successfully:', createdCharacter);
         Alert.alert('Sucesso', 'Personagem criado com sucesso!', [
           {
             text: 'OK',
-            onPress: () => router.back(),
+            onPress: () => {
+              console.log('🔙 Navigating back after character creation');
+              router.back();
+            },
           },
         ]);
       } else {
+        const errorText = await response.text();
+        console.log('❌ API Error response:', errorText);
         Alert.alert('Erro', 'Não foi possível criar o personagem.');
       }
     } catch (error) {
-      console.error('Error creating character:', error);
+      console.error('💥 Error creating character:', error);
       Alert.alert('Erro', 'Erro ao criar personagem.');
     } finally {
       setSaving(false);
+      console.log('🔄 Setting saving state to false');
     }
   };
 
   const goBack = () => {
+    console.log('🔙 goBack function called, current step:', step);
     if (step > 1) {
+      console.log('⬅️ Going to previous step');
       setStep(step - 1);
     } else {
+      console.log('🔙 Going back to previous screen');
       router.back();
     }
   };
 
   if (loading) {
+    console.log('⏳ Showing loading screen');
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <User size={48} color="#D4AF37" />
@@ -282,6 +322,8 @@ export default function CreateCharacterScreen() {
       </SafeAreaView>
     );
   }
+
+  console.log('🎨 Rendering create character screen, step:', step);
 
   const renderStepContent = () => {
     switch (step) {
@@ -298,7 +340,10 @@ export default function CreateCharacterScreen() {
                 style={styles.textInput}
                 placeholder="Digite o nome do personagem..."
                 value={characterData.name}
-                onChangeText={(text) => setCharacterData(prev => ({ ...prev, name: text }))}
+                onChangeText={(text) => {
+                  console.log('📝 Name changed to:', text);
+                  setCharacterData(prev => ({ ...prev, name: text }));
+                }}
                 maxLength={50}
               />
             </View>
@@ -321,7 +366,10 @@ export default function CreateCharacterScreen() {
                     styles.optionCard,
                     characterData.race?.id === race.id && styles.selectedOption,
                   ]}
-                  onPress={() => setCharacterData(prev => ({ ...prev, race }))}
+                  onPress={() => {
+                    console.log('🧝 Race selected:', race.name);
+                    setCharacterData(prev => ({ ...prev, race }));
+                  }}
                 >
                   <Text style={[
                     styles.optionTitle,
@@ -365,7 +413,10 @@ export default function CreateCharacterScreen() {
                     styles.optionCard,
                     characterData.class?.id === dndClass.id && styles.selectedOption,
                   ]}
-                  onPress={() => setCharacterData(prev => ({ ...prev, class: dndClass }))}
+                  onPress={() => {
+                    console.log('⚔️ Class selected:', dndClass.name);
+                    setCharacterData(prev => ({ ...prev, class: dndClass }));
+                  }}
                 >
                   <View style={styles.classHeader}>
                     <Text style={[
@@ -414,7 +465,10 @@ export default function CreateCharacterScreen() {
                       styles.chipButton,
                       characterData.background === background && styles.selectedChip,
                     ]}
-                    onPress={() => setCharacterData(prev => ({ ...prev, background }))}
+                    onPress={() => {
+                      console.log('📚 Background selected:', background);
+                      setCharacterData(prev => ({ ...prev, background }));
+                    }}
                   >
                     <Text style={[
                       styles.chipText,
@@ -437,7 +491,10 @@ export default function CreateCharacterScreen() {
                       styles.alignmentButton,
                       characterData.alignment === alignment && styles.selectedAlignment,
                     ]}
-                    onPress={() => setCharacterData(prev => ({ ...prev, alignment }))}
+                    onPress={() => {
+                      console.log('⚖️ Alignment selected:', alignment);
+                      setCharacterData(prev => ({ ...prev, alignment }));
+                    }}
                   >
                     <Text style={[
                       styles.alignmentText,
@@ -558,7 +615,13 @@ export default function CreateCharacterScreen() {
         {step < 5 ? (
           <TouchableOpacity
             style={[styles.nextButton, !canProceed() && styles.disabledButton]}
-            onPress={() => setStep(step + 1)}
+            onPress={() => {
+              console.log('➡️ Next button pressed, current step:', step);
+              if (canProceed()) {
+                setStep(step + 1);
+                console.log('➡️ Moving to step:', step + 1);
+              }
+            }}
             disabled={!canProceed()}
           >
             <Text style={styles.nextButtonText}>Próximo</Text>
@@ -566,7 +629,10 @@ export default function CreateCharacterScreen() {
         ) : (
           <TouchableOpacity
             style={[styles.saveButton, saving && styles.disabledButton]}
-            onPress={saveCharacter}
+            onPress={() => {
+              console.log('💾 Save button pressed');
+              saveCharacter();
+            }}
             disabled={saving}
           >
             {saving ? (
