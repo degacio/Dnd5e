@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Animated } from 'react-native';
 import { SpellList } from '@/components/SpellList';
 import { Spell } from '@/types/spell';
-import { Sparkles, CircleUser as UserCircle } from 'lucide-react-native';
+import { Sparkles, CircleUser as UserCircle, Users, Plus, X } from 'lucide-react-native';
 import { adaptSpellsFromLivroDoJogador } from '@/utils/spellAdapter';
 import { Platform } from 'react-native';
 import { router } from 'expo-router';
@@ -10,6 +10,9 @@ import { router } from 'expo-router';
 export default function SpellsTab() {
   const [spells, setSpells] = useState<Spell[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fabMenuOpen, setFabMenuOpen] = useState(false);
+  const [rotateAnim] = useState(new Animated.Value(0));
+  const [scaleAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
     loadSpells();
@@ -74,9 +77,63 @@ export default function SpellsTab() {
     }
   };
 
+  const toggleFabMenu = () => {
+    const toValue = fabMenuOpen ? 0 : 1;
+    
+    Animated.parallel([
+      Animated.timing(rotateAnim, {
+        toValue,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    setFabMenuOpen(!fabMenuOpen);
+  };
+
   const navigateToCharacters = () => {
+    setFabMenuOpen(false);
+    Animated.parallel([
+      Animated.timing(rotateAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
     router.push('/characters');
   };
+
+  const navigateToClasses = () => {
+    setFabMenuOpen(false);
+    Animated.parallel([
+      Animated.timing(rotateAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    router.push('/(tabs)/classes');
+  };
+
+  const rotateInterpolate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '45deg'],
+  });
 
   if (loading) {
     return (
@@ -101,14 +158,81 @@ export default function SpellsTab() {
       
       <SpellList spells={spells} />
       
-      {/* Floating Action Button for Characters */}
-      <TouchableOpacity 
-        style={styles.fab}
-        onPress={navigateToCharacters}
-        activeOpacity={0.8}
+      {/* FAB Menu Options */}
+      {fabMenuOpen && (
+        <>
+          <Animated.View 
+            style={[
+              styles.fabOption,
+              styles.fabOptionCharacters,
+              {
+                transform: [{ scale: scaleAnim }],
+              },
+            ]}
+          >
+            <TouchableOpacity 
+              style={styles.fabOptionButton}
+              onPress={navigateToCharacters}
+              activeOpacity={0.8}
+            >
+              <UserCircle size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <View style={styles.fabOptionLabel}>
+              <Text style={styles.fabOptionText}>Personagens</Text>
+            </View>
+          </Animated.View>
+
+          <Animated.View 
+            style={[
+              styles.fabOption,
+              styles.fabOptionClasses,
+              {
+                transform: [{ scale: scaleAnim }],
+              },
+            ]}
+          >
+            <TouchableOpacity 
+              style={styles.fabOptionButton}
+              onPress={navigateToClasses}
+              activeOpacity={0.8}
+            >
+              <Users size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <View style={styles.fabOptionLabel}>
+              <Text style={styles.fabOptionText}>Classes</Text>
+            </View>
+          </Animated.View>
+
+          {/* Overlay to close menu */}
+          <TouchableOpacity 
+            style={styles.fabOverlay}
+            onPress={toggleFabMenu}
+            activeOpacity={1}
+          />
+        </>
+      )}
+      
+      {/* Main Floating Action Button */}
+      <Animated.View
+        style={[
+          styles.fab,
+          {
+            transform: [{ rotate: rotateInterpolate }],
+          },
+        ]}
       >
-        <UserCircle size={32} color="#FFFFFF" />
-      </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.fabButton}
+          onPress={toggleFabMenu}
+          activeOpacity={0.8}
+        >
+          {fabMenuOpen ? (
+            <X size={32} color="#FFFFFF" />
+          ) : (
+            <Plus size={32} color="#FFFFFF" />
+          )}
+        </TouchableOpacity>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -152,6 +276,14 @@ const styles = StyleSheet.create({
     color: '#D4AF37',
     fontWeight: '500',
   },
+  fabOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
   fab: {
     position: 'absolute',
     bottom: 24,
@@ -159,15 +291,65 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: '#D4AF37',
-    justifyContent: 'center',
-    alignItems: 'center',
     elevation: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+  },
+  fabButton: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 34,
+    backgroundColor: '#D4AF37',
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 2,
     borderColor: '#B8941F',
+  },
+  fabOption: {
+    position: 'absolute',
+    right: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  fabOptionCharacters: {
+    bottom: 110,
+  },
+  fabOptionClasses: {
+    bottom: 170,
+  },
+  fabOptionButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#8E44AD',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    borderWidth: 2,
+    borderColor: '#7D3C98',
+  },
+  fabOptionLabel: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 12,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  fabOptionText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

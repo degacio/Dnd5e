@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { BookOpen, Users, Settings, Eye } from 'lucide-react-native';
+import { BookOpen, Settings, Eye } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -27,15 +27,6 @@ export default function TabLayout() {
           title: 'Lista de Magias',
           tabBarIcon: ({ size, color }) => (
             <BookOpen size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="classes"
-        options={{
-          title: 'Classes',
-          tabBarIcon: ({ size, color }) => (
-            <Users size={size} color={color} />
           ),
         }}
       />
