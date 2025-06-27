@@ -30,6 +30,7 @@ export default function SettingsTab() {
   const [spellsFileLoaded, setSpellsFileLoaded] = useState(false);
   const [classesFileLoaded, setClassesFileLoaded] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     getUserInfo();
@@ -56,18 +57,54 @@ export default function SettingsTab() {
           text: 'Sair',
           style: 'destructive',
           onPress: async () => {
+            setIsLoggingOut(true);
             try {
-              const { error } = await supabase.auth.signOut();
-              if (error) {
-                console.error('Logout error:', error);
-                Alert.alert('Erro', 'Não foi possível sair da conta.');
-              } else {
-                console.log('✅ Logout successful');
-                router.replace('/auth');
+              console.log('🔄 Starting logout process...');
+              
+              // Clear any local storage data if on web
+              if (Platform.OS === 'web') {
+                try {
+                  localStorage.clear();
+                  console.log('✅ Local storage cleared');
+                } catch (error) {
+                  console.warn('⚠️ Could not clear localStorage:', error);
+                }
               }
+
+              // Sign out from Supabase
+              const { error } = await supabase.auth.signOut();
+              
+              if (error) {
+                console.error('❌ Logout error:', error);
+                Alert.alert('Erro', 'Não foi possível sair da conta. Tente novamente.');
+                return;
+              }
+
+              console.log('✅ Logout successful');
+              
+              // Clear user state
+              setUserEmail(null);
+              
+              // Show success message and redirect
+              Alert.alert(
+                'Logout Realizado',
+                'Você foi desconectado com sucesso.',
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => {
+                      console.log('🔄 Redirecting to auth screen...');
+                      // Use replace to prevent going back to the authenticated area
+                      router.replace('/auth');
+                    },
+                  },
+                ]
+              );
             } catch (error) {
-              console.error('Logout error:', error);
+              console.error('💥 Logout error:', error);
               Alert.alert('Erro', 'Erro inesperado ao sair da conta.');
+            } finally {
+              setIsLoggingOut(false);
             }
           },
         },
@@ -241,9 +278,15 @@ export default function SettingsTab() {
               </View>
             </View>
             
-            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-              <LogOut size={16} color="#E74C3C" />
-              <Text style={styles.logoutButtonText}>Sair da Conta</Text>
+            <TouchableOpacity 
+              style={[styles.logoutButton, isLoggingOut && styles.logoutButtonDisabled]} 
+              onPress={handleLogout}
+              disabled={isLoggingOut}
+            >
+              <LogOut size={16} color={isLoggingOut ? "#BDC3C7" : "#E74C3C"} />
+              <Text style={[styles.logoutButtonText, isLoggingOut && styles.logoutButtonTextDisabled]}>
+                {isLoggingOut ? 'Saindo...' : 'Sair da Conta'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -425,10 +468,17 @@ const styles = StyleSheet.create({
     borderColor: '#FECACA',
     gap: 8,
   },
+  logoutButtonDisabled: {
+    backgroundColor: '#F5F5F5',
+    borderColor: '#E8E8E8',
+  },
   logoutButtonText: {
     color: '#E74C3C',
     fontSize: 14,
     fontWeight: '600',
+  },
+  logoutButtonTextDisabled: {
+    color: '#BDC3C7',
   },
   fileCard: {
     backgroundColor: '#FFFFFF',
