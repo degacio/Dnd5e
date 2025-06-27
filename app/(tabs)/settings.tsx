@@ -33,84 +33,150 @@ export default function SettingsTab() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
+    console.log('🔄 SettingsTab mounted, getting user info...');
     getUserInfo();
   }, []);
 
   const getUserInfo = async () => {
     try {
+      console.log('🔍 Getting user info from Supabase...');
       const { data: { user } } = await supabase.auth.getUser();
+      console.log('👤 User data received:', user ? `${user.email} (${user.id})` : 'No user');
       if (user) {
         setUserEmail(user.email);
+        console.log('✅ User email set to state:', user.email);
+      } else {
+        console.log('❌ No user found');
       }
     } catch (error) {
-      console.error('Error getting user info:', error);
+      console.error('💥 Error getting user info:', error);
     }
   };
 
   const handleLogout = async () => {
-    Alert.alert(
-      'Sair da Conta',
-      'Tem certeza que deseja sair? Você precisará fazer login novamente para acessar seus personagens.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Sair',
-          style: 'destructive',
-          onPress: performLogout
-        }
-      ]
-    );
+    console.log('🎯 handleLogout function called');
+    console.log('📊 Current state - isLoggingOut:', isLoggingOut, 'userEmail:', userEmail);
+    
+    try {
+      console.log('🔔 Showing logout confirmation alert...');
+      
+      Alert.alert(
+        'Sair da Conta',
+        'Tem certeza que deseja sair? Você precisará fazer login novamente para acessar seus personagens.',
+        [
+          { 
+            text: 'Cancelar', 
+            style: 'cancel',
+            onPress: () => {
+              console.log('❌ User cancelled logout');
+            }
+          },
+          {
+            text: 'Sair',
+            style: 'destructive',
+            onPress: () => {
+              console.log('✅ User confirmed logout, calling performLogout...');
+              performLogout();
+            }
+          }
+        ]
+      );
+      
+      console.log('📱 Alert.alert called successfully');
+    } catch (error) {
+      console.error('💥 Error showing logout alert:', error);
+    }
   };
 
   const performLogout = async () => {
+    console.log('🚀 performLogout function started');
+    
+    if (isLoggingOut) {
+      console.log('⚠️ Already logging out, preventing duplicate call');
+      return;
+    }
+    
     setIsLoggingOut(true);
+    console.log('🔄 Set isLoggingOut to true');
     
     try {
-      console.log('🔄 Starting logout process...');
+      console.log('🧹 Starting logout process...');
       
       // Clear any local storage data if on web
       if (Platform.OS === 'web') {
         try {
+          console.log('🌐 Platform is web, clearing localStorage...');
+          const itemsCleared = [];
+          
+          // Log what's in localStorage before clearing
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key) {
+              itemsCleared.push(key);
+            }
+          }
+          console.log('📦 Items in localStorage before clear:', itemsCleared);
+          
           localStorage.clear();
-          console.log('✅ Local storage cleared');
+          console.log('✅ localStorage cleared successfully');
         } catch (error) {
           console.warn('⚠️ Could not clear localStorage:', error);
         }
+      } else {
+        console.log('📱 Platform is not web, skipping localStorage clear');
       }
 
       // Sign out from Supabase
-      console.log('🔄 Signing out from Supabase...');
+      console.log('🔐 Signing out from Supabase...');
       const { error } = await supabase.auth.signOut();
       
       if (error) {
-        console.error('❌ Logout error:', error);
-        Alert.alert('Erro', 'Não foi possível sair da conta. Tente novamente.');
+        console.error('❌ Supabase logout error:', error);
+        console.error('❌ Error details:', {
+          message: error.message,
+          status: error.status,
+          statusCode: error.statusCode
+        });
+        Alert.alert('Erro', `Não foi possível sair da conta: ${error.message}`);
         return;
       }
 
-      console.log('✅ Logout successful');
+      console.log('✅ Supabase logout successful');
       
       // Clear user state immediately
+      console.log('🧹 Clearing user state...');
       setUserEmail(null);
+      console.log('✅ User email cleared from state');
       
       // Force navigation to auth screen
       console.log('🔄 Redirecting to auth screen...');
       
-      // Use router.replace to prevent going back to authenticated area
-      router.replace('/auth');
-      
-      // Show success message after navigation
-      setTimeout(() => {
-        Alert.alert(
-          'Logout Realizado',
-          'Você foi desconectado com sucesso.'
-        );
-      }, 100);
+      try {
+        // Use router.replace to prevent going back to authenticated area
+        console.log('🧭 Calling router.replace("/auth")...');
+        router.replace('/auth');
+        console.log('✅ Router.replace called successfully');
+        
+        // Show success message after navigation
+        setTimeout(() => {
+          console.log('🎉 Showing success message...');
+          Alert.alert(
+            'Logout Realizado',
+            'Você foi desconectado com sucesso.'
+          );
+        }, 100);
+        
+      } catch (routerError) {
+        console.error('💥 Router error:', routerError);
+        Alert.alert('Erro', 'Erro ao redirecionar. Recarregue a página.');
+      }
       
     } catch (error) {
       console.error('💥 Logout error:', error);
-      Alert.alert('Erro', 'Erro inesperado ao sair da conta.');
+      console.error('💥 Error stack:', error.stack);
+      Alert.alert('Erro', `Erro inesperado ao sair da conta: ${error.message}`);
     } finally {
+      console.log('🔄 Setting isLoggingOut to false');
       setIsLoggingOut(false);
     }
   };
@@ -255,6 +321,13 @@ export default function SettingsTab() {
     );
   };
 
+  console.log('🎨 Rendering SettingsTab with state:', {
+    userEmail,
+    isLoggingOut,
+    spellsFileLoaded,
+    classesFileLoaded
+  });
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -283,7 +356,16 @@ export default function SettingsTab() {
             
             <TouchableOpacity 
               style={[styles.logoutButton, isLoggingOut && styles.logoutButtonDisabled]} 
-              onPress={handleLogout}
+              onPress={() => {
+                console.log('🎯 Logout button pressed!');
+                console.log('📊 Button state - disabled:', isLoggingOut);
+                if (!isLoggingOut) {
+                  console.log('✅ Button not disabled, calling handleLogout...');
+                  handleLogout();
+                } else {
+                  console.log('⚠️ Button is disabled, ignoring press');
+                }
+              }}
               disabled={isLoggingOut}
               activeOpacity={0.7}
             >
