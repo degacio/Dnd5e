@@ -56,60 +56,63 @@ export default function SettingsTab() {
         {
           text: 'Sair',
           style: 'destructive',
-          onPress: async () => {
-            setIsLoggingOut(true);
-            try {
-              console.log('🔄 Starting logout process...');
-              
-              // Clear any local storage data if on web
-              if (Platform.OS === 'web') {
-                try {
-                  localStorage.clear();
-                  console.log('✅ Local storage cleared');
-                } catch (error) {
-                  console.warn('⚠️ Could not clear localStorage:', error);
-                }
-              }
-
-              // Sign out from Supabase
-              const { error } = await supabase.auth.signOut();
-              
-              if (error) {
-                console.error('❌ Logout error:', error);
-                Alert.alert('Erro', 'Não foi possível sair da conta. Tente novamente.');
-                return;
-              }
-
-              console.log('✅ Logout successful');
-              
-              // Clear user state
-              setUserEmail(null);
-              
-              // Show success message and redirect
-              Alert.alert(
-                'Logout Realizado',
-                'Você foi desconectado com sucesso.',
-                [
-                  {
-                    text: 'OK',
-                    onPress: () => {
-                      console.log('🔄 Redirecting to auth screen...');
-                      // Use replace to prevent going back to the authenticated area
-                      router.replace('/auth');
-                    },
-                  },
-                ]
-              );
-            } catch (error) {
-              console.error('💥 Logout error:', error);
-              Alert.alert('Erro', 'Erro inesperado ao sair da conta.');
-            } finally {
-              setIsLoggingOut(false);
-            }
-          },
-        },
+          onPress: performLogout
+        }
       ]
     );
+  };
+
+  const performLogout = async () => {
+    setIsLoggingOut(true);
+    
+    try {
+      console.log('🔄 Starting logout process...');
+      
+      // Clear any local storage data if on web
+      if (Platform.OS === 'web') {
+        try {
+          localStorage.clear();
+          console.log('✅ Local storage cleared');
+        } catch (error) {
+          console.warn('⚠️ Could not clear localStorage:', error);
+        }
+      }
+
+      // Sign out from Supabase
+      console.log('🔄 Signing out from Supabase...');
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('❌ Logout error:', error);
+        Alert.alert('Erro', 'Não foi possível sair da conta. Tente novamente.');
+        return;
+      }
+
+      console.log('✅ Logout successful');
+      
+      // Clear user state immediately
+      setUserEmail(null);
+      
+      // Force navigation to auth screen
+      console.log('🔄 Redirecting to auth screen...');
+      
+      // Use router.replace to prevent going back to authenticated area
+      router.replace('/auth');
+      
+      // Show success message after navigation
+      setTimeout(() => {
+        Alert.alert(
+          'Logout Realizado',
+          'Você foi desconectado com sucesso.'
+        );
+      }, 100);
+      
+    } catch (error) {
+      console.error('💥 Logout error:', error);
+      Alert.alert('Erro', 'Erro inesperado ao sair da conta.');
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   const pickSpellsFile = async () => {
@@ -282,6 +285,7 @@ export default function SettingsTab() {
               style={[styles.logoutButton, isLoggingOut && styles.logoutButtonDisabled]} 
               onPress={handleLogout}
               disabled={isLoggingOut}
+              activeOpacity={0.7}
             >
               <LogOut size={16} color={isLoggingOut ? "#BDC3C7" : "#E74C3C"} />
               <Text style={[styles.logoutButtonText, isLoggingOut && styles.logoutButtonTextDisabled]}>
