@@ -4,9 +4,10 @@ import { Character } from '@/types/database';
 import { CharacterCard } from '@/components/CharacterCard';
 import { CharacterDetailModal } from '@/components/CharacterDetailModal';
 import { supabase } from '@/lib/supabase';
-import { Shield, User, Plus, RefreshCw } from 'lucide-react-native';
+import { Shield, User, Plus, RefreshCw, ArrowLeft } from 'lucide-react-native';
+import { router } from 'expo-router';
 
-export default function CharactersTab() {
+export default function CharactersScreen() {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,7 +40,7 @@ export default function CharactersTab() {
         return;
       }
 
-      const response = await fetch('/api/characters', {
+      const response = await fetch('/characters', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -70,7 +71,7 @@ export default function CharactersTab() {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`/api/characters/${characterId}/share`, {
+      const response = await fetch(`/characters/${characterId}/share`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -114,7 +115,7 @@ export default function CharactersTab() {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`/api/characters/${characterId}/share`, {
+      const response = await fetch(`/characters/${characterId}/share`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -190,7 +191,7 @@ export default function CharactersTab() {
         }
       };
 
-      const response = await fetch('/api/characters', {
+      const response = await fetch('/characters', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -212,6 +213,10 @@ export default function CharactersTab() {
     }
   };
 
+  const goBack = () => {
+    router.back();
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
@@ -224,6 +229,10 @@ export default function CharactersTab() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={goBack}>
+          <ArrowLeft size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        
         <View style={styles.titleContainer}>
           <Shield size={28} color="#D4AF37" />
           <Text style={styles.title}>Personagens</Text>
@@ -315,10 +324,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 3,
     borderBottomColor: '#D4AF37',
   },
+  backButton: {
+    position: 'absolute',
+    left: 20,
+    top: 20,
+    zIndex: 1,
+    padding: 4,
+  },
   titleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
+    marginLeft: 40,
   },
   title: {
     fontSize: 24,
@@ -330,6 +347,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#D4AF37',
     fontWeight: '500',
+    marginLeft: 40,
   },
   headerActions: {
     flexDirection: 'row',
