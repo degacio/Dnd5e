@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
 import { SpellList } from '@/components/SpellList';
 import { Spell } from '@/types/spell';
-import { Sparkles, Shield } from 'lucide-react-native';
+import { Sparkles, UserCircle } from 'lucide-react-native';
 import { adaptSpellsFromLivroDoJogador } from '@/utils/spellAdapter';
 import { Platform } from 'react-native';
 import { router } from 'expo-router';
@@ -107,7 +107,7 @@ export default function SpellsTab() {
         onPress={navigateToCharacters}
         activeOpacity={0.8}
       >
-        <Shield size={28} color="#FFFFFF" />
+        <UserCircle size={32} color="#FFFFFF" />
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -156,9 +156,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 24,
     right: 24,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: '#D4AF37',
     justifyContent: 'center',
     alignItems: 'center',

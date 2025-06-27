@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { BookOpen, Shield, Users, Settings, Eye } from 'lucide-react-native';
+import { BookOpen, Users, Settings, Eye } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
