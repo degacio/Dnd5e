@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { BookOpen, Dice6, Shield, Sword, Users, Settings } from 'lucide-react-native';
+import { BookOpen, Dice6, Shield, Sword, Users, Settings, Eye } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -45,6 +45,15 @@ export default function TabLayout() {
           title: 'Personagens',
           tabBarIcon: ({ size, color }) => (
             <Shield size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="dm-view"
+        options={{
+          title: 'Visão DM',
+          tabBarIcon: ({ size, color }) => (
+            <Eye size={size} color={color} />
           ),
         }}
       />
