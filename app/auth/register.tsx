@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, UserPlus, Eye, EyeOff, Mail, Lock, User } from 'lucide-react-native';
+import { ArrowLeft, UserPlus, Eye, EyeOff, Mail, Lock, User, CheckCircle } from 'lucide-react-native';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
@@ -55,36 +55,69 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
+      console.log('🔄 Starting registration process...');
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password: password,
       });
 
       if (error) {
-        console.error('Registration error:', error);
-        Alert.alert('Erro de Cadastro', error.message);
+        console.error('❌ Registration error:', error);
+        
+        // Handle specific error cases
+        if (error.message.includes('already registered')) {
+          Alert.alert(
+            'Email já cadastrado', 
+            'Este email já está cadastrado. Você gostaria de fazer login?',
+            [
+              { text: 'Cancelar', style: 'cancel' },
+              { 
+                text: 'Fazer Login', 
+                onPress: () => router.push('/auth/login')
+              }
+            ]
+          );
+        } else {
+          Alert.alert('Erro de Cadastro', error.message);
+        }
         return;
       }
 
       if (data.user) {
-        console.log('✅ Registration successful:', data.user.email);
-        Alert.alert(
-          'Cadastro Realizado',
-          'Sua conta foi criada com sucesso! Você já pode começar a usar o aplicativo.',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Navigate to main app
-                router.replace('/(tabs)');
+        console.log('✅ Registration successful for:', data.user.email);
+        
+        // Check if user needs email confirmation
+        if (data.user && !data.session) {
+          Alert.alert(
+            'Confirme seu Email',
+            'Um email de confirmação foi enviado para sua caixa de entrada. Por favor, confirme seu email antes de fazer login.',
+            [
+              {
+                text: 'OK',
+                onPress: () => router.push('/auth/login')
+              }
+            ]
+          );
+        } else {
+          // User is automatically signed in
+          Alert.alert(
+            'Cadastro Realizado com Sucesso!',
+            `Bem-vindo(a), ${data.user.email}! Sua conta foi criada e você já está logado.`,
+            [
+              {
+                text: 'Continuar',
+                onPress: () => {
+                  console.log('🔄 Redirecting to main app...');
+                  router.replace('/(tabs)');
+                },
               },
-            },
-          ]
-        );
+            ]
+          );
+        }
       }
     } catch (error) {
-      console.error('Registration error:', error);
-      Alert.alert('Erro', 'Erro inesperado durante o cadastro.');
+      console.error('💥 Registration error:', error);
+      Alert.alert('Erro', 'Erro inesperado durante o cadastro. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -111,10 +144,15 @@ export default function RegisterScreen() {
               <ArrowLeft size={24} color="#333" />
             </TouchableOpacity>
             
-            <Text style={styles.title}>Criar Conta</Text>
-            <Text style={styles.subtitle}>
-              Crie sua conta para salvar seus personagens na nuvem
-            </Text>
+            <View style={styles.headerContent}>
+              <View style={styles.iconContainer}>
+                <UserPlus size={32} color="#27AE60" />
+              </View>
+              <Text style={styles.title}>Criar Conta</Text>
+              <Text style={styles.subtitle}>
+                Crie sua conta para salvar seus personagens na nuvem
+              </Text>
+            </View>
           </View>
 
           {/* Form */}
@@ -130,6 +168,7 @@ export default function RegisterScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
+                  editable={!loading}
                 />
               </View>
             </View>
@@ -145,10 +184,12 @@ export default function RegisterScreen() {
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  editable={!loading}
                 />
                 <TouchableOpacity
                   style={styles.eyeButton}
                   onPress={() => setShowPassword(!showPassword)}
+                  disabled={loading}
                 >
                   {showPassword ? (
                     <EyeOff size={20} color="#666" />
@@ -170,10 +211,12 @@ export default function RegisterScreen() {
                   secureTextEntry={!showConfirmPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  editable={!loading}
                 />
                 <TouchableOpacity
                   style={styles.eyeButton}
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  disabled={loading}
                 >
                   {showConfirmPassword ? (
                     <EyeOff size={20} color="#666" />
@@ -190,18 +233,24 @@ export default function RegisterScreen() {
               disabled={loading}
               activeOpacity={0.8}
             >
-              <UserPlus size={20} color="#FFFFFF" />
-              <Text style={styles.registerButtonText}>
-                {loading ? 'Criando conta...' : 'Criar Conta'}
-              </Text>
+              {loading ? (
+                <Text style={styles.registerButtonText}>Criando conta...</Text>
+              ) : (
+                <>
+                  <UserPlus size={20} color="#FFFFFF" />
+                  <Text style={styles.registerButtonText}>Criar Conta</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
 
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>Já tem uma conta?</Text>
-            <TouchableOpacity onPress={navigateToLogin}>
-              <Text style={styles.footerLink}>Entrar</Text>
+            <TouchableOpacity onPress={navigateToLogin} disabled={loading}>
+              <Text style={[styles.footerLink, loading && styles.footerLinkDisabled]}>
+                Entrar
+              </Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -231,16 +280,30 @@ const styles = StyleSheet.create({
     padding: 8,
     marginBottom: 24,
   },
+  headerContent: {
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#E8F5E8',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   title: {
     fontSize: 32,
     fontWeight: '700',
     color: '#1A1A1A',
     marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
     color: '#666',
     lineHeight: 24,
+    textAlign: 'center',
   },
   form: {
     paddingHorizontal: 24,
@@ -314,5 +377,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#D4AF37',
     fontWeight: '600',
+  },
+  footerLinkDisabled: {
+    color: '#BDC3C7',
   },
 });

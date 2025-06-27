@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, LogIn, Eye, EyeOff, Mail, Lock } from 'lucide-react-native';
+import { ArrowLeft, LogIn, Eye, EyeOff, Mail, Lock, Shield } from 'lucide-react-native';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -29,32 +29,58 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
+      console.log('🔄 Starting login process for:', email.trim());
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: password,
       });
 
       if (error) {
-        console.error('Login error:', error);
-        Alert.alert('Erro de Login', error.message);
+        console.error('❌ Login error:', error);
+        
+        // Handle specific error cases
+        if (error.message.includes('Invalid login credentials')) {
+          Alert.alert(
+            'Credenciais Inválidas', 
+            'Email ou senha incorretos. Verifique suas credenciais e tente novamente.'
+          );
+        } else if (error.message.includes('Email not confirmed')) {
+          Alert.alert(
+            'Email não confirmado',
+            'Por favor, confirme seu email antes de fazer login. Verifique sua caixa de entrada.'
+          );
+        } else {
+          Alert.alert('Erro de Login', error.message);
+        }
         return;
       }
 
-      if (data.user) {
-        console.log('✅ Login successful:', data.user.email);
-        Alert.alert('Sucesso', 'Login realizado com sucesso!', [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigate to main app
-              router.replace('/(tabs)');
+      if (data.user && data.session) {
+        console.log('✅ Login successful for:', data.user.email);
+        
+        // Show success message and redirect
+        Alert.alert(
+          'Login Realizado com Sucesso!',
+          `Bem-vindo(a) de volta, ${data.user.email}!`,
+          [
+            {
+              text: 'Continuar',
+              onPress: () => {
+                console.log('🔄 Redirecting to main app...');
+                // Use replace to prevent going back to login screen
+                router.replace('/(tabs)');
+              },
             },
-          },
-        ]);
+          ]
+        );
+      } else {
+        console.error('❌ Login failed: No user or session returned');
+        Alert.alert('Erro', 'Falha no login. Tente novamente.');
       }
     } catch (error) {
-      console.error('Login error:', error);
-      Alert.alert('Erro', 'Erro inesperado durante o login.');
+      console.error('💥 Login error:', error);
+      Alert.alert('Erro', 'Erro inesperado durante o login. Verifique sua conexão e tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -66,6 +92,42 @@ export default function LoginScreen() {
 
   const navigateToRegister = () => {
     router.push('/auth/register');
+  };
+
+  const handleForgotPassword = () => {
+    if (!email.trim()) {
+      Alert.alert(
+        'Email necessário',
+        'Por favor, digite seu email no campo acima e tente novamente.'
+      );
+      return;
+    }
+
+    Alert.alert(
+      'Redefinir Senha',
+      `Enviar email de redefinição de senha para ${email.trim()}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Enviar',
+          onPress: async () => {
+            try {
+              const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+              if (error) {
+                Alert.alert('Erro', error.message);
+              } else {
+                Alert.alert(
+                  'Email Enviado',
+                  'Verifique sua caixa de entrada para redefinir sua senha.'
+                );
+              }
+            } catch (error) {
+              Alert.alert('Erro', 'Não foi possível enviar o email de redefinição.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -81,10 +143,15 @@ export default function LoginScreen() {
               <ArrowLeft size={24} color="#333" />
             </TouchableOpacity>
             
-            <Text style={styles.title}>Entrar</Text>
-            <Text style={styles.subtitle}>
-              Acesse sua conta para gerenciar seus personagens
-            </Text>
+            <View style={styles.headerContent}>
+              <View style={styles.iconContainer}>
+                <Shield size={32} color="#D4AF37" />
+              </View>
+              <Text style={styles.title}>Entrar</Text>
+              <Text style={styles.subtitle}>
+                Acesse sua conta para gerenciar seus personagens
+              </Text>
+            </View>
           </View>
 
           {/* Form */}
@@ -100,6 +167,7 @@ export default function LoginScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
+                  editable={!loading}
                 />
               </View>
             </View>
@@ -115,10 +183,12 @@ export default function LoginScreen() {
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  editable={!loading}
                 />
                 <TouchableOpacity
                   style={styles.eyeButton}
                   onPress={() => setShowPassword(!showPassword)}
+                  disabled={loading}
                 >
                   {showPassword ? (
                     <EyeOff size={20} color="#666" />
@@ -130,23 +200,39 @@ export default function LoginScreen() {
             </View>
 
             <TouchableOpacity
+              style={styles.forgotPasswordButton}
+              onPress={handleForgotPassword}
+              disabled={loading}
+            >
+              <Text style={[styles.forgotPasswordText, loading && styles.forgotPasswordTextDisabled]}>
+                Esqueceu sua senha?
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={[styles.loginButton, loading && styles.loginButtonDisabled]}
               onPress={handleLogin}
               disabled={loading}
               activeOpacity={0.8}
             >
-              <LogIn size={20} color="#FFFFFF" />
-              <Text style={styles.loginButtonText}>
-                {loading ? 'Entrando...' : 'Entrar'}
-              </Text>
+              {loading ? (
+                <Text style={styles.loginButtonText}>Entrando...</Text>
+              ) : (
+                <>
+                  <LogIn size={20} color="#FFFFFF" />
+                  <Text style={styles.loginButtonText}>Entrar</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
 
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>Não tem uma conta?</Text>
-            <TouchableOpacity onPress={navigateToRegister}>
-              <Text style={styles.footerLink}>Criar conta</Text>
+            <TouchableOpacity onPress={navigateToRegister} disabled={loading}>
+              <Text style={[styles.footerLink, loading && styles.footerLinkDisabled]}>
+                Criar conta
+              </Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -176,16 +262,30 @@ const styles = StyleSheet.create({
     padding: 8,
     marginBottom: 24,
   },
+  headerContent: {
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#FFF9E6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   title: {
     fontSize: 32,
     fontWeight: '700',
     color: '#1A1A1A',
     marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
     color: '#666',
     lineHeight: 24,
+    textAlign: 'center',
   },
   form: {
     paddingHorizontal: 24,
@@ -219,6 +319,19 @@ const styles = StyleSheet.create({
   eyeButton: {
     padding: 8,
   },
+  forgotPasswordButton: {
+    alignSelf: 'flex-end',
+    marginBottom: 24,
+    padding: 4,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: '#D4AF37',
+    fontWeight: '500',
+  },
+  forgotPasswordTextDisabled: {
+    color: '#BDC3C7',
+  },
   loginButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -228,7 +341,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 24,
     gap: 12,
-    marginTop: 12,
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -259,5 +371,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#D4AF37',
     fontWeight: '600',
+  },
+  footerLinkDisabled: {
+    color: '#BDC3C7',
   },
 });
