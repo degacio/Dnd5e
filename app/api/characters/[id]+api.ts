@@ -66,13 +66,12 @@ export async function PUT(request: Request, { id }: { id: string }) {
       updated_at: new Date().toISOString(),
     };
 
-    const { data: character, error } = await supabase
+    const { data: characters, error } = await supabase
       .from('characters')
       .update(updateData)
       .eq('id', id)
       .eq('user_id', user.id)
-      .select()
-      .single();
+      .select();
 
     if (error) {
       console.error('Error updating character:', error);
@@ -87,7 +86,16 @@ export async function PUT(request: Request, { id }: { id: string }) {
       });
     }
 
-    return Response.json(character);
+    if (!characters || characters.length === 0) {
+      return new Response(JSON.stringify({ 
+        error: 'Character not found or you do not have permission to update it'
+      }), { 
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    return Response.json(characters[0]);
   } catch (error) {
     console.error('API Error:', error);
     return new Response(JSON.stringify({ 
