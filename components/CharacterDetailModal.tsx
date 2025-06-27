@@ -12,21 +12,7 @@ import {
   Clipboard,
 } from 'react-native';
 import { Character } from '@/types/database';
-import { 
-  X, 
-  User, 
-  Heart, 
-  Zap, 
-  Share2, 
-  Copy,
-  Shield,
-  Sword,
-  Clock,
-  Eye,
-  EyeOff,
-  Edit,
-  BookOpen
-} from 'lucide-react-native';
+import { X, User, Heart, Zap, Share2, Copy, Shield, Sword, Clock, Eye, EyeOff, CreditCard as Edit, BookOpen } from 'lucide-react-native';
 import { router } from 'expo-router';
 
 interface CharacterDetailModalProps {
