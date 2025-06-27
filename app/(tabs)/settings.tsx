@@ -7,7 +7,8 @@ import {
   ScrollView, 
   TouchableOpacity, 
   Alert,
-  Platform 
+  Platform,
+  Modal
 } from 'react-native';
 import { 
   Settings, 
@@ -31,6 +32,7 @@ export default function SettingsTab() {
   const [classesFileLoaded, setClassesFileLoaded] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   useEffect(() => {
     console.log('🔄 SettingsTab mounted, getting user info...');
@@ -58,34 +60,53 @@ export default function SettingsTab() {
     console.log('📊 Current state - isLoggingOut:', isLoggingOut, 'userEmail:', userEmail);
     
     try {
-      console.log('🔔 Showing logout confirmation alert...');
+      console.log('🔔 Showing logout confirmation...');
       
-      Alert.alert(
-        'Sair da Conta',
-        'Tem certeza que deseja sair? Você precisará fazer login novamente para acessar seus personagens.',
-        [
-          { 
-            text: 'Cancelar', 
-            style: 'cancel',
-            onPress: () => {
-              console.log('❌ User cancelled logout');
+      if (Platform.OS === 'web') {
+        // Use custom modal for web
+        console.log('🌐 Using custom modal for web platform');
+        setShowLogoutModal(true);
+      } else {
+        // Use native Alert for mobile
+        console.log('📱 Using native Alert for mobile platform');
+        Alert.alert(
+          'Sair da Conta',
+          'Tem certeza que deseja sair? Você precisará fazer login novamente para acessar seus personagens.',
+          [
+            { 
+              text: 'Cancelar', 
+              style: 'cancel',
+              onPress: () => {
+                console.log('❌ User cancelled logout');
+              }
+            },
+            {
+              text: 'Sair',
+              style: 'destructive',
+              onPress: () => {
+                console.log('✅ User confirmed logout, calling performLogout...');
+                performLogout();
+              }
             }
-          },
-          {
-            text: 'Sair',
-            style: 'destructive',
-            onPress: () => {
-              console.log('✅ User confirmed logout, calling performLogout...');
-              performLogout();
-            }
-          }
-        ]
-      );
+          ]
+        );
+      }
       
-      console.log('📱 Alert.alert called successfully');
+      console.log('📱 Logout confirmation shown successfully');
     } catch (error) {
-      console.error('💥 Error showing logout alert:', error);
+      console.error('💥 Error showing logout confirmation:', error);
     }
+  };
+
+  const confirmLogout = () => {
+    console.log('✅ User confirmed logout from modal, calling performLogout...');
+    setShowLogoutModal(false);
+    performLogout();
+  };
+
+  const cancelLogout = () => {
+    console.log('❌ User cancelled logout from modal');
+    setShowLogoutModal(false);
   };
 
   const performLogout = async () => {
@@ -137,7 +158,12 @@ export default function SettingsTab() {
           status: error.status,
           statusCode: error.statusCode
         });
-        Alert.alert('Erro', `Não foi possível sair da conta: ${error.message}`);
+        
+        if (Platform.OS === 'web') {
+          alert(`Erro: Não foi possível sair da conta: ${error.message}`);
+        } else {
+          Alert.alert('Erro', `Não foi possível sair da conta: ${error.message}`);
+        }
         return;
       }
 
@@ -160,21 +186,34 @@ export default function SettingsTab() {
         // Show success message after navigation
         setTimeout(() => {
           console.log('🎉 Showing success message...');
-          Alert.alert(
-            'Logout Realizado',
-            'Você foi desconectado com sucesso.'
-          );
+          if (Platform.OS === 'web') {
+            alert('Logout Realizado: Você foi desconectado com sucesso.');
+          } else {
+            Alert.alert(
+              'Logout Realizado',
+              'Você foi desconectado com sucesso.'
+            );
+          }
         }, 100);
         
       } catch (routerError) {
         console.error('💥 Router error:', routerError);
-        Alert.alert('Erro', 'Erro ao redirecionar. Recarregue a página.');
+        if (Platform.OS === 'web') {
+          alert('Erro: Erro ao redirecionar. Recarregue a página.');
+        } else {
+          Alert.alert('Erro', 'Erro ao redirecionar. Recarregue a página.');
+        }
       }
       
     } catch (error) {
       console.error('💥 Logout error:', error);
       console.error('💥 Error stack:', error.stack);
-      Alert.alert('Erro', `Erro inesperado ao sair da conta: ${error.message}`);
+      
+      if (Platform.OS === 'web') {
+        alert(`Erro: Erro inesperado ao sair da conta: ${error.message}`);
+      } else {
+        Alert.alert('Erro', `Erro inesperado ao sair da conta: ${error.message}`);
+      }
     } finally {
       console.log('🔄 Setting isLoggingOut to false');
       setIsLoggingOut(false);
@@ -205,13 +244,13 @@ export default function SettingsTab() {
               // Store the adapted spells in localStorage for web
               localStorage.setItem('customSpells', JSON.stringify(adaptedSpells));
               setSpellsFileLoaded(true);
-              Alert.alert('Sucesso', `Arquivo de magias carregado com sucesso! ${adaptedSpells.length} magias importadas.`);
+              alert(`Sucesso: Arquivo de magias carregado com sucesso! ${adaptedSpells.length} magias importadas.`);
             } else {
-              Alert.alert('Erro', 'Não foi possível processar o arquivo de magias.');
+              alert('Erro: Não foi possível processar o arquivo de magias.');
             }
           } catch (error) {
             console.error('Error processing JSON file:', error);
-            Alert.alert('Erro', 'O arquivo não está em um formato JSON válido.');
+            alert('Erro: O arquivo não está em um formato JSON válido.');
           }
         };
         
@@ -256,10 +295,7 @@ export default function SettingsTab() {
   const pickClassesFile = async () => {
     try {
       if (Platform.OS === 'web') {
-        Alert.alert(
-          'Funcionalidade Web',
-          'No navegador, você pode editar diretamente os arquivos JSON na pasta /data do projeto.'
-        );
+        alert('Funcionalidade Web: No navegador, você pode editar diretamente os arquivos JSON na pasta /data do projeto.');
         return;
       }
 
@@ -279,53 +315,75 @@ export default function SettingsTab() {
   };
 
   const exportData = () => {
-    Alert.alert(
-      'Exportar Dados',
-      'Esta funcionalidade permitirá exportar seus dados personalizados.',
-      [{ text: 'OK' }]
-    );
+    if (Platform.OS === 'web') {
+      alert('Exportar Dados: Esta funcionalidade permitirá exportar seus dados personalizados.');
+    } else {
+      Alert.alert(
+        'Exportar Dados',
+        'Esta funcionalidade permitirá exportar seus dados personalizados.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const clearData = () => {
-    Alert.alert(
-      'Limpar Dados',
-      'Tem certeza que deseja limpar todos os dados personalizados? Esta ação não pode ser desfeita.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Limpar', 
-          style: 'destructive',
-          onPress: () => {
-            // Clear localStorage on web or AsyncStorage on native
-            if (Platform.OS === 'web') {
-              localStorage.removeItem('customSpells');
-            } else {
-              // AsyncStorage.removeItem('customSpells');
-            }
-            setSpellsFileLoaded(false);
-            setClassesFileLoaded(false);
-            Alert.alert('Dados Limpos', 'Todos os dados personalizados foram removidos.');
+    const performClear = () => {
+      // Clear localStorage on web or AsyncStorage on native
+      if (Platform.OS === 'web') {
+        localStorage.removeItem('customSpells');
+      } else {
+        // AsyncStorage.removeItem('customSpells');
+      }
+      setSpellsFileLoaded(false);
+      setClassesFileLoaded(false);
+      
+      if (Platform.OS === 'web') {
+        alert('Dados Limpos: Todos os dados personalizados foram removidos.');
+      } else {
+        Alert.alert('Dados Limpos', 'Todos os dados personalizados foram removidos.');
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (confirm('Limpar Dados: Tem certeza que deseja limpar todos os dados personalizados? Esta ação não pode ser desfeita.')) {
+        performClear();
+      }
+    } else {
+      Alert.alert(
+        'Limpar Dados',
+        'Tem certeza que deseja limpar todos os dados personalizados? Esta ação não pode ser desfeita.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { 
+            text: 'Limpar', 
+            style: 'destructive',
+            onPress: performClear
           }
-        }
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const showInfo = () => {
-    Alert.alert(
-      'Sobre os Arquivos JSON',
-      'Os arquivos JSON devem seguir a estrutura específica do aplicativo:\n\n' +
-      '• Magias: Devem conter campos como name, school, level, description, etc.\n' +
-      '• Classes: Devem conter informações como hitDie, primaryAbility, classFeatures, etc.\n\n' +
-      'O aplicativo suporta a importação do formato "Livro do Jogador" e fará a conversão automaticamente para o formato interno.'
-    );
+    if (Platform.OS === 'web') {
+      alert('Sobre os Arquivos JSON: Os arquivos JSON devem seguir a estrutura específica do aplicativo:\n\n• Magias: Devem conter campos como name, school, level, description, etc.\n• Classes: Devem conter informações como hitDie, primaryAbility, classFeatures, etc.\n\nO aplicativo suporta a importação do formato "Livro do Jogador" e fará a conversão automaticamente para o formato interno.');
+    } else {
+      Alert.alert(
+        'Sobre os Arquivos JSON',
+        'Os arquivos JSON devem seguir a estrutura específica do aplicativo:\n\n' +
+        '• Magias: Devem conter campos como name, school, level, description, etc.\n' +
+        '• Classes: Devem conter informações como hitDie, primaryAbility, classFeatures, etc.\n\n' +
+        'O aplicativo suporta a importação do formato "Livro do Jogador" e fará a conversão automaticamente para o formato interno.'
+      );
+    }
   };
 
   console.log('🎨 Rendering SettingsTab with state:', {
     userEmail,
     isLoggingOut,
     spellsFileLoaded,
-    classesFileLoaded
+    classesFileLoaded,
+    showLogoutModal
   });
 
   return (
@@ -467,6 +525,45 @@ export default function SettingsTab() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Custom Logout Modal for Web */}
+      <Modal
+        visible={showLogoutModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={cancelLogout}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <LogOut size={24} color="#E74C3C" />
+              <Text style={styles.modalTitle}>Sair da Conta</Text>
+            </View>
+            
+            <Text style={styles.modalMessage}>
+              Tem certeza que deseja sair? Você precisará fazer login novamente para acessar seus personagens.
+            </Text>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]} 
+                onPress={cancelLogout}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.confirmButton]} 
+                onPress={confirmLogout}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.confirmButtonText}>Sair</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -659,5 +756,71 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     lineHeight: 16,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 12,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: '#666',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  confirmButton: {
+    backgroundColor: '#E74C3C',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
