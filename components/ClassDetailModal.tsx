@@ -7,6 +7,8 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
+  Alert,
+  Platform,
 } from 'react-native';
 import { DnDClass, ClassColors } from '@/types/dndClass';
 import { Spell } from '@/types/spell';
@@ -24,18 +26,23 @@ import {
   Sparkles,
   ChevronDown,
   ChevronRight,
-  Scroll
+  Scroll,
+  Plus,
+  Check
 } from 'lucide-react-native';
 
 interface ClassDetailModalProps {
   dndClass: DnDClass | null;
   visible: boolean;
   onClose: () => void;
+  onAddSpellsToGrimoire?: (spells: Spell[]) => void;
 }
 
-export function ClassDetailModal({ dndClass, visible, onClose }: ClassDetailModalProps) {
+export function ClassDetailModal({ dndClass, visible, onClose, onAddSpellsToGrimoire }: ClassDetailModalProps) {
   const [selectedSpell, setSelectedSpell] = useState<Spell | null>(null);
   const [expandedSubclasses, setExpandedSubclasses] = useState<Set<string>>(new Set());
+  const [selectedSpells, setSelectedSpells] = useState<Set<string>>(new Set());
+  const [showSpellSelection, setShowSpellSelection] = useState(false);
   
   const classSpells = useMemo(() => {
     if (!dndClass) return [];
@@ -68,6 +75,79 @@ export function ClassDetailModal({ dndClass, visible, onClose }: ClassDetailModa
     setExpandedSubclasses(newExpanded);
   };
 
+  const toggleSpellSelection = (spellId: string) => {
+    const newSelected = new Set(selectedSpells);
+    if (newSelected.has(spellId)) {
+      newSelected.delete(spellId);
+    } else {
+      newSelected.add(spellId);
+    }
+    setSelectedSpells(newSelected);
+  };
+
+  const handleAddSelectedSpells = () => {
+    if (selectedSpells.size === 0) {
+      const message = 'Selecione pelo menos uma magia para adicionar ao grimório.';
+      if (Platform.OS === 'web') {
+        alert(`Aviso: ${message}`);
+      } else {
+        Alert.alert('Aviso', message);
+      }
+      return;
+    }
+
+    const spellsToAdd = classSpells.filter(spell => selectedSpells.has(spell.id));
+    
+    const confirmMessage = `Adicionar ${spellsToAdd.length} magia(s) ao grimório?`;
+    
+    const performAdd = () => {
+      if (onAddSpellsToGrimoire) {
+        onAddSpellsToGrimoire(spellsToAdd);
+      }
+      
+      // Reset selection and close modal
+      setSelectedSpells(new Set());
+      setShowSpellSelection(false);
+      
+      const successMessage = `${spellsToAdd.length} magia(s) adicionada(s) ao grimório com sucesso!`;
+      if (Platform.OS === 'web') {
+        alert(`Sucesso: ${successMessage}`);
+      } else {
+        Alert.alert('Sucesso', successMessage);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (confirm(`Confirmar: ${confirmMessage}`)) {
+        performAdd();
+      }
+    } else {
+      Alert.alert(
+        'Confirmar',
+        confirmMessage,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Adicionar', onPress: performAdd }
+        ]
+      );
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedSpells.size === classSpells.length) {
+      // Deselect all
+      setSelectedSpells(new Set());
+    } else {
+      // Select all
+      setSelectedSpells(new Set(classSpells.map(spell => spell.id)));
+    }
+  };
+
+  const handleCancelSelection = () => {
+    setSelectedSpells(new Set());
+    setShowSpellSelection(false);
+  };
+
   // Função para calcular o bônus de proficiência baseado no nível
   const getProficiencyBonus = (level: number): number => {
     return Math.ceil(level / 4) + 1;
@@ -76,6 +156,8 @@ export function ClassDetailModal({ dndClass, visible, onClose }: ClassDetailModa
   if (!dndClass) return null;
 
   const classColor = ClassColors[dndClass.name as keyof typeof ClassColors] || '#666';
+  const isSpellcaster = !!dndClass.spellcasting;
+  const hasSpells = classSpells.length > 0;
 
   return (
     <>
@@ -383,22 +465,95 @@ export function ClassDetailModal({ dndClass, visible, onClose }: ClassDetailModa
             </View>
 
             {/* Magias da Classe */}
-            {classSpells.length > 0 && (
+            {hasSpells && (
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
                   <Sparkles size={20} color={classColor} />
                   <Text style={[styles.sectionTitle, { color: classColor }]}>
                     Magias da Classe ({classSpells.length})
                   </Text>
+                  
+                  {/* Botão para adicionar magias ao grimório */}
+                  {isSpellcaster && onAddSpellsToGrimoire && (
+                    <TouchableOpacity
+                      style={[styles.addToGrimoireButton, { backgroundColor: classColor }]}
+                      onPress={() => setShowSpellSelection(!showSpellSelection)}
+                      activeOpacity={0.8}
+                    >
+                      <Plus size={16} color="#FFFFFF" />
+                      <Text style={styles.addToGrimoireButtonText}>
+                        {showSpellSelection ? 'Cancelar' : 'Adicionar ao Grimório'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
+
+                {/* Controles de seleção */}
+                {showSpellSelection && (
+                  <View style={styles.selectionControls}>
+                    <View style={styles.selectionInfo}>
+                      <Text style={styles.selectionText}>
+                        {selectedSpells.size} de {classSpells.length} magias selecionadas
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.selectionButtons}>
+                      <TouchableOpacity
+                        style={styles.selectAllButton}
+                        onPress={handleSelectAll}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.selectAllButtonText}>
+                          {selectedSpells.size === classSpells.length ? 'Desmarcar Todas' : 'Selecionar Todas'}
+                        </Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity
+                        style={[styles.confirmButton, { backgroundColor: classColor }]}
+                        onPress={handleAddSelectedSpells}
+                        activeOpacity={0.8}
+                      >
+                        <Check size={16} color="#FFFFFF" />
+                        <Text style={styles.confirmButtonText}>Adicionar</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity
+                        style={styles.cancelButton}
+                        onPress={handleCancelSelection}
+                        activeOpacity={0.8}
+                      >
+                        <X size={16} color="#666" />
+                        <Text style={styles.cancelButtonText}>Cancelar</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
                 
                 <View style={styles.spellsContainer}>
                   {classSpells.map((spell) => (
-                    <SpellCard
-                      key={spell.id}
-                      spell={spell}
-                      onPress={() => setSelectedSpell(spell)}
-                    />
+                    <View key={spell.id} style={styles.spellCardContainer}>
+                      {showSpellSelection && (
+                        <TouchableOpacity
+                          style={[
+                            styles.spellCheckbox,
+                            selectedSpells.has(spell.id) && styles.spellCheckboxSelected
+                          ]}
+                          onPress={() => toggleSpellSelection(spell.id)}
+                          activeOpacity={0.8}
+                        >
+                          {selectedSpells.has(spell.id) && (
+                            <Check size={16} color="#FFFFFF" />
+                          )}
+                        </TouchableOpacity>
+                      )}
+                      
+                      <View style={[styles.spellCardWrapper, showSpellSelection && styles.spellCardWithCheckbox]}>
+                        <SpellCard
+                          spell={spell}
+                          onPress={() => !showSpellSelection && setSelectedSpell(spell)}
+                        />
+                      </View>
+                    </View>
                   ))}
                 </View>
               </View>
@@ -466,11 +621,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
+    justifyContent: 'space-between',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     marginLeft: 8,
+    flex: 1,
   },
   subsectionTitle: {
     fontSize: 16,
@@ -755,5 +912,109 @@ const styles = StyleSheet.create({
   },
   spellsContainer: {
     marginTop: -6,
+  },
+  addToGrimoireButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  addToGrimoireButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  selectionControls: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: '#E8E8E8',
+  },
+  selectionInfo: {
+    marginBottom: 12,
+  },
+  selectionText: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  selectionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+  },
+  selectAllButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#D4AF37',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  selectAllButtonText: {
+    color: '#D4AF37',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  confirmButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 6,
+  },
+  confirmButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  cancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#E8E8E8',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 6,
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  spellCardContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  spellCheckbox: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  spellCheckboxSelected: {
+    backgroundColor: '#27AE60',
+    borderColor: '#27AE60',
+  },
+  spellCardWrapper: {
+    flex: 1,
+  },
+  spellCardWithCheckbox: {
+    opacity: 0.8,
   },
 });
