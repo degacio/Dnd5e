@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -17,14 +17,63 @@ import {
   Trash2, 
   Info,
   BookOpen,
-  Users
+  Users,
+  LogOut,
+  User
 } from 'lucide-react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { adaptSpellsFromLivroDoJogador } from '@/utils/spellAdapter';
+import { supabase } from '@/lib/supabase';
+import { router } from 'expo-router';
 
 export default function SettingsTab() {
   const [spellsFileLoaded, setSpellsFileLoaded] = useState(false);
   const [classesFileLoaded, setClassesFileLoaded] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    getUserInfo();
+  }, []);
+
+  const getUserInfo = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserEmail(user.email);
+      }
+    } catch (error) {
+      console.error('Error getting user info:', error);
+    }
+  };
+
+  const handleLogout = async () => {
+    Alert.alert(
+      'Sair da Conta',
+      'Tem certeza que deseja sair? Você precisará fazer login novamente para acessar seus personagens.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sair',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase.auth.signOut();
+              if (error) {
+                console.error('Logout error:', error);
+                Alert.alert('Erro', 'Não foi possível sair da conta.');
+              } else {
+                console.log('✅ Logout successful');
+                router.replace('/auth');
+              }
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Erro', 'Erro inesperado ao sair da conta.');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const pickSpellsFile = async () => {
     try {
@@ -179,6 +228,26 @@ export default function SettingsTab() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Seção de Conta */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Conta</Text>
+          
+          <View style={styles.accountCard}>
+            <View style={styles.accountHeader}>
+              <User size={24} color="#27AE60" />
+              <View style={styles.accountInfo}>
+                <Text style={styles.accountLabel}>Usuário logado</Text>
+                <Text style={styles.accountEmail}>{userEmail || 'Carregando...'}</Text>
+              </View>
+            </View>
+            
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <LogOut size={16} color="#E74C3C" />
+              <Text style={styles.logoutButtonText}>Sair da Conta</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Seção de Arquivos */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Gerenciar Arquivos</Text>
@@ -313,6 +382,53 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#333',
     marginBottom: 16,
+  },
+  accountCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  accountHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  accountInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  accountLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  accountEmail: {
+    fontSize: 14,
+    color: '#666',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF5F5',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    gap: 8,
+  },
+  logoutButtonText: {
+    color: '#E74C3C',
+    fontSize: 14,
+    fontWeight: '600',
   },
   fileCard: {
     backgroundColor: '#FFFFFF',
