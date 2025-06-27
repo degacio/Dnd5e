@@ -40,7 +40,7 @@ export default function CharactersScreen() {
         return;
       }
 
-      const response = await fetch('/characters', {
+      const response = await fetch('/api/characters', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -71,7 +71,7 @@ export default function CharactersScreen() {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`/characters/${characterId}/share`, {
+      const response = await fetch(`/api/characters/${characterId}/share`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -115,7 +115,7 @@ export default function CharactersScreen() {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`/characters/${characterId}/share`, {
+      const response = await fetch(`/api/characters/${characterId}/share`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -191,7 +191,7 @@ export default function CharactersScreen() {
         }
       };
 
-      const response = await fetch('/characters', {
+      const response = await fetch('/api/characters', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -218,6 +218,7 @@ export default function CharactersScreen() {
   };
 
   const navigateToClasses = () => {
+    console.log('Navigating to classes...');
     try {
       router.push('/characters/classes');
     } catch (error) {
@@ -227,8 +228,8 @@ export default function CharactersScreen() {
   };
 
   const navigateToCreateCharacter = () => {
+    console.log('Navigating to create character...');
     try {
-      console.log('Navigating to create character...');
       router.push('/characters/create');
     } catch (error) {
       console.error('Error navigating to create character:', error);

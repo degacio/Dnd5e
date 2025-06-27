@@ -239,7 +239,7 @@ export default function CreateCharacterScreen() {
         },
       };
 
-      const response = await fetch('/characters', {
+      const response = await fetch('/api/characters', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
