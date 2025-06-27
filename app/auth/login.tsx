@@ -16,7 +16,7 @@ import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { ArrowLeft, LogIn, Eye, EyeOff, Mail, Lock, Shield } from 'lucide-react-native';
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -229,8 +229,12 @@ export default function LoginScreen() {
     }
   };
 
-  const isSmallScreen = screenWidth < 768;
-  const isVerySmallScreen = screenWidth < 480;
+  // Enhanced responsive breakpoints for mobile devices
+  const isTablet = screenWidth >= 768;
+  const isLargePhone = screenWidth >= 414 && screenWidth < 768; // iPhone Pro Max, Galaxy S24+
+  const isMediumPhone = screenWidth >= 375 && screenWidth < 414; // iPhone 14, Galaxy S24
+  const isSmallPhone = screenWidth < 375; // Smaller devices
+  const isShortScreen = screenHeight < 700; // Devices with limited height
 
   console.log('🎨 Rendering LoginScreen with state:', {
     email: email ? 'Has email' : 'No email',
@@ -238,8 +242,9 @@ export default function LoginScreen() {
     loading,
     showPassword,
     screenWidth,
-    isSmallScreen,
-    isVerySmallScreen
+    screenHeight,
+    deviceType: isTablet ? 'tablet' : isLargePhone ? 'large-phone' : isMediumPhone ? 'medium-phone' : 'small-phone',
+    isShortScreen
   });
 
   return (
@@ -247,36 +252,73 @@ export default function LoginScreen() {
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          style={styles.scrollContainer} 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.scrollContent,
+            isShortScreen && styles.scrollContentCompact
+          ]}
+          bounces={false}
+        >
           {/* Header */}
-          <View style={[styles.header, isVerySmallScreen && styles.headerCompact]}>
+          <View style={[
+            styles.header,
+            isSmallPhone && styles.headerSmall,
+            isShortScreen && styles.headerShort
+          ]}>
             <TouchableOpacity 
               style={[styles.backButton, loading && styles.disabledButton]} 
               onPress={goBack}
               disabled={loading}
             >
-              <ArrowLeft size={isVerySmallScreen ? 20 : 24} color={loading ? "#95A5A6" : "#333"} />
+              <ArrowLeft size={isSmallPhone ? 20 : 24} color={loading ? "#95A5A6" : "#333"} />
             </TouchableOpacity>
             
             <View style={styles.headerContent}>
-              <View style={[styles.iconContainer, isVerySmallScreen && styles.iconContainerSmall]}>
-                <Shield size={isVerySmallScreen ? 28 : 32} color="#D4AF37" />
+              <View style={[
+                styles.iconContainer,
+                isSmallPhone && styles.iconContainerSmall,
+                isShortScreen && styles.iconContainerShort
+              ]}>
+                <Shield size={isSmallPhone ? 24 : isShortScreen ? 28 : 32} color="#D4AF37" />
               </View>
-              <Text style={[styles.title, isVerySmallScreen && styles.titleSmall]}>Entrar</Text>
-              <Text style={[styles.subtitle, isVerySmallScreen && styles.subtitleSmall]}>
+              <Text style={[
+                styles.title,
+                isSmallPhone && styles.titleSmall,
+                isShortScreen && styles.titleShort
+              ]}>
+                Entrar
+              </Text>
+              <Text style={[
+                styles.subtitle,
+                isSmallPhone && styles.subtitleSmall,
+                isShortScreen && styles.subtitleShort
+              ]}>
                 Acesse sua conta para gerenciar seus personagens
               </Text>
             </View>
           </View>
 
           {/* Form */}
-          <View style={[styles.form, isSmallScreen && styles.formCompact]}>
-            <View style={styles.inputContainer}>
+          <View style={[
+            styles.form,
+            isSmallPhone && styles.formSmall,
+            isShortScreen && styles.formShort
+          ]}>
+            <View style={[
+              styles.inputContainer,
+              isShortScreen && styles.inputContainerShort
+            ]}>
               <View style={[styles.inputWrapper, loading && styles.inputWrapperDisabled]}>
-                <Mail size={isVerySmallScreen ? 18 : 20} color={loading ? "#BDC3C7" : "#666"} style={styles.inputIcon} />
+                <Mail size={isSmallPhone ? 16 : 20} color={loading ? "#BDC3C7" : "#666"} style={styles.inputIcon} />
                 <TextInput
-                  style={[styles.textInput, isVerySmallScreen && styles.textInputSmall]}
+                  style={[
+                    styles.textInput,
+                    isSmallPhone && styles.textInputSmall
+                  ]}
                   placeholder="Email"
                   value={email}
                   onChangeText={setEmail}
@@ -289,11 +331,18 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            <View style={styles.inputContainer}>
+            <View style={[
+              styles.inputContainer,
+              isShortScreen && styles.inputContainerShort
+            ]}>
               <View style={[styles.inputWrapper, loading && styles.inputWrapperDisabled]}>
-                <Lock size={isVerySmallScreen ? 18 : 20} color={loading ? "#BDC3C7" : "#666"} style={styles.inputIcon} />
+                <Lock size={isSmallPhone ? 16 : 20} color={loading ? "#BDC3C7" : "#666"} style={styles.inputIcon} />
                 <TextInput
-                  style={[styles.textInput, styles.passwordInput, isVerySmallScreen && styles.textInputSmall]}
+                  style={[
+                    styles.textInput,
+                    styles.passwordInput,
+                    isSmallPhone && styles.textInputSmall
+                  ]}
                   placeholder="Senha"
                   value={password}
                   onChangeText={setPassword}
@@ -309,23 +358,27 @@ export default function LoginScreen() {
                   disabled={loading}
                 >
                   {showPassword ? (
-                    <EyeOff size={isVerySmallScreen ? 18 : 20} color={loading ? "#BDC3C7" : "#666"} />
+                    <EyeOff size={isSmallPhone ? 16 : 20} color={loading ? "#BDC3C7" : "#666"} />
                   ) : (
-                    <Eye size={isVerySmallScreen ? 18 : 20} color={loading ? "#BDC3C7" : "#666"} />
+                    <Eye size={isSmallPhone ? 16 : 20} color={loading ? "#BDC3C7" : "#666"} />
                   )}
                 </TouchableOpacity>
               </View>
             </View>
 
             <TouchableOpacity
-              style={[styles.forgotPasswordButton, loading && styles.disabledButton]}
+              style={[
+                styles.forgotPasswordButton,
+                loading && styles.disabledButton,
+                isShortScreen && styles.forgotPasswordButtonShort
+              ]}
               onPress={handleForgotPassword}
               disabled={loading}
             >
               <Text style={[
                 styles.forgotPasswordText, 
                 loading && styles.forgotPasswordTextDisabled,
-                isVerySmallScreen && styles.forgotPasswordTextSmall
+                isSmallPhone && styles.forgotPasswordTextSmall
               ]}>
                 Esqueceu sua senha?
               </Text>
@@ -335,7 +388,8 @@ export default function LoginScreen() {
               style={[
                 styles.loginButton, 
                 loading && styles.loginButtonDisabled,
-                isVerySmallScreen && styles.loginButtonCompact
+                isSmallPhone && styles.loginButtonSmall,
+                isShortScreen && styles.loginButtonShort
               ]}
               onPress={() => {
                 console.log('🎯 Login button pressed!');
@@ -351,13 +405,19 @@ export default function LoginScreen() {
               activeOpacity={0.8}
             >
               {loading ? (
-                <Text style={[styles.loginButtonText, isVerySmallScreen && styles.loginButtonTextSmall]}>
+                <Text style={[
+                  styles.loginButtonText,
+                  isSmallPhone && styles.loginButtonTextSmall
+                ]}>
                   Entrando...
                 </Text>
               ) : (
                 <>
-                  <LogIn size={isVerySmallScreen ? 18 : 20} color="#FFFFFF" />
-                  <Text style={[styles.loginButtonText, isVerySmallScreen && styles.loginButtonTextSmall]}>
+                  <LogIn size={isSmallPhone ? 16 : 20} color="#FFFFFF" />
+                  <Text style={[
+                    styles.loginButtonText,
+                    isSmallPhone && styles.loginButtonTextSmall
+                  ]}>
                     Entrar
                   </Text>
                 </>
@@ -366,19 +426,29 @@ export default function LoginScreen() {
           </View>
 
           {/* Footer */}
-          <View style={[styles.footer, isSmallScreen && styles.footerCompact]}>
-            <Text style={[styles.footerText, isVerySmallScreen && styles.footerTextSmall]}>
+          <View style={[
+            styles.footer,
+            isSmallPhone && styles.footerSmall,
+            isShortScreen && styles.footerShort
+          ]}>
+            <Text style={[
+              styles.footerText,
+              isSmallPhone && styles.footerTextSmall
+            ]}>
               Não tem uma conta?
             </Text>
             <TouchableOpacity 
               onPress={navigateToRegister} 
               disabled={loading}
-              style={loading && styles.disabledButton}
+              style={[
+                styles.footerLinkButton,
+                loading && styles.disabledButton
+              ]}
             >
               <Text style={[
                 styles.footerLink, 
                 loading && styles.footerLinkDisabled,
-                isVerySmallScreen && styles.footerLinkSmall
+                isSmallPhone && styles.footerLinkSmall
               ]}>
                 Criar conta
               </Text>
@@ -401,21 +471,36 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flex: 1,
   },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40,
+  },
+  scrollContentCompact: {
+    paddingBottom: 20,
+  },
   header: {
     paddingHorizontal: 24,
     paddingTop: 20,
-    paddingBottom: 40,
+    paddingBottom: 32,
   },
-  headerCompact: {
+  headerSmall: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 32,
+    paddingBottom: 24,
+  },
+  headerShort: {
+    paddingTop: 12,
+    paddingBottom: 20,
   },
   backButton: {
     alignSelf: 'flex-start',
     padding: 8,
-    marginBottom: 24,
+    marginBottom: 20,
     borderRadius: 8,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   disabledButton: {
     opacity: 0.5,
@@ -433,6 +518,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   iconContainerSmall: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginBottom: 12,
+  },
+  iconContainerShort: {
     width: 64,
     height: 64,
     borderRadius: 32,
@@ -446,6 +537,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   titleSmall: {
+    fontSize: 26,
+    marginBottom: 6,
+  },
+  titleShort: {
     fontSize: 28,
     marginBottom: 6,
   },
@@ -454,21 +549,34 @@ const styles = StyleSheet.create({
     color: '#666',
     lineHeight: 24,
     textAlign: 'center',
+    paddingHorizontal: 16,
   },
   subtitleSmall: {
     fontSize: 14,
     lineHeight: 20,
+    paddingHorizontal: 8,
+  },
+  subtitleShort: {
+    fontSize: 14,
+    lineHeight: 20,
+    paddingHorizontal: 12,
   },
   form: {
     paddingHorizontal: 24,
-    marginBottom: 40,
-  },
-  formCompact: {
-    paddingHorizontal: 16,
     marginBottom: 32,
+  },
+  formSmall: {
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  formShort: {
+    marginBottom: 20,
   },
   inputContainer: {
     marginBottom: 20,
+  },
+  inputContainerShort: {
+    marginBottom: 16,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -496,7 +604,7 @@ const styles = StyleSheet.create({
   },
   textInputSmall: {
     fontSize: 14,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   passwordInput: {
     paddingRight: 12,
@@ -504,12 +612,21 @@ const styles = StyleSheet.create({
   eyeButton: {
     padding: 8,
     borderRadius: 6,
+    minWidth: 36,
+    minHeight: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   forgotPasswordButton: {
     alignSelf: 'flex-end',
     marginBottom: 24,
-    padding: 4,
+    padding: 8,
     borderRadius: 6,
+    minHeight: 36,
+    justifyContent: 'center',
+  },
+  forgotPasswordButtonShort: {
+    marginBottom: 16,
   },
   forgotPasswordText: {
     fontSize: 14,
@@ -538,11 +655,15 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     minHeight: 56,
   },
-  loginButtonCompact: {
+  loginButtonSmall: {
     paddingVertical: 14,
     paddingHorizontal: 20,
-    gap: 10,
+    gap: 8,
     minHeight: 48,
+  },
+  loginButtonShort: {
+    paddingVertical: 12,
+    minHeight: 44,
   },
   loginButtonDisabled: {
     backgroundColor: '#BDC3C7',
@@ -564,10 +685,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 32,
     gap: 8,
+    flexWrap: 'wrap',
   },
-  footerCompact: {
+  footerSmall: {
     paddingHorizontal: 16,
     paddingBottom: 24,
+    gap: 4,
+  },
+  footerShort: {
+    paddingBottom: 20,
   },
   footerText: {
     fontSize: 16,
@@ -576,11 +702,16 @@ const styles = StyleSheet.create({
   footerTextSmall: {
     fontSize: 14,
   },
+  footerLinkButton: {
+    padding: 4,
+    borderRadius: 4,
+    minHeight: 32,
+    justifyContent: 'center',
+  },
   footerLink: {
     fontSize: 16,
     color: '#D4AF37',
     fontWeight: '600',
-    padding: 4,
   },
   footerLinkSmall: {
     fontSize: 14,
