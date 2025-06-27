@@ -28,7 +28,8 @@ import {
   ChevronRight,
   Scroll,
   Plus,
-  Check
+  Check,
+  Minus
 } from 'lucide-react-native';
 
 interface ClassDetailModalProps {
@@ -85,7 +86,15 @@ export function ClassDetailModal({ dndClass, visible, onClose, onAddSpellsToGrim
     setSelectedSpells(newSelected);
   };
 
+  const handleStartSpellSelection = () => {
+    console.log('🎯 Starting spell selection mode...');
+    setShowSpellSelection(true);
+    setSelectedSpells(new Set());
+  };
+
   const handleAddSelectedSpells = () => {
+    console.log('🎯 Adding selected spells to grimoire...', selectedSpells.size);
+    
     if (selectedSpells.size === 0) {
       const message = 'Selecione pelo menos uma magia para adicionar ao grimório.';
       if (Platform.OS === 'web') {
@@ -97,24 +106,19 @@ export function ClassDetailModal({ dndClass, visible, onClose, onAddSpellsToGrim
     }
 
     const spellsToAdd = classSpells.filter(spell => selectedSpells.has(spell.id));
+    console.log('📚 Spells to add:', spellsToAdd.map(s => s.name));
     
     const confirmMessage = `Adicionar ${spellsToAdd.length} magia(s) ao grimório?`;
     
     const performAdd = () => {
+      console.log('✅ Confirming spell addition...');
       if (onAddSpellsToGrimoire) {
         onAddSpellsToGrimoire(spellsToAdd);
       }
       
-      // Reset selection and close modal
+      // Reset selection and close selection mode
       setSelectedSpells(new Set());
       setShowSpellSelection(false);
-      
-      const successMessage = `${spellsToAdd.length} magia(s) adicionada(s) ao grimório com sucesso!`;
-      if (Platform.OS === 'web') {
-        alert(`Sucesso: ${successMessage}`);
-      } else {
-        Alert.alert('Sucesso', successMessage);
-      }
     };
 
     if (Platform.OS === 'web') {
@@ -144,8 +148,17 @@ export function ClassDetailModal({ dndClass, visible, onClose, onAddSpellsToGrim
   };
 
   const handleCancelSelection = () => {
+    console.log('❌ Cancelling spell selection...');
     setSelectedSpells(new Set());
     setShowSpellSelection(false);
+  };
+
+  // Reset states when modal closes
+  const handleClose = () => {
+    setSelectedSpells(new Set());
+    setShowSpellSelection(false);
+    setSelectedSpell(null);
+    onClose();
   };
 
   // Função para calcular o bônus de proficiência baseado no nível
@@ -159,6 +172,16 @@ export function ClassDetailModal({ dndClass, visible, onClose, onAddSpellsToGrim
   const isSpellcaster = !!dndClass.spellcasting;
   const hasSpells = classSpells.length > 0;
 
+  console.log('🎨 Rendering ClassDetailModal:', {
+    className: dndClass.name,
+    isSpellcaster,
+    hasSpells,
+    spellCount: classSpells.length,
+    showSpellSelection,
+    selectedSpellsCount: selectedSpells.size,
+    hasGrimoireCallback: !!onAddSpellsToGrimoire
+  });
+
   return (
     <>
       <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
@@ -169,7 +192,7 @@ export function ClassDetailModal({ dndClass, visible, onClose, onAddSpellsToGrim
                 <Text style={styles.className}>{dndClass.name}</Text>
                 <Text style={styles.classDescription}>{dndClass.description}</Text>
               </View>
-              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
                 <X size={24} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
@@ -472,26 +495,29 @@ export function ClassDetailModal({ dndClass, visible, onClose, onAddSpellsToGrim
                   <Text style={[styles.sectionTitle, { color: classColor }]}>
                     Magias da Classe ({classSpells.length})
                   </Text>
-                  
-                  {/* Botão para adicionar magias ao grimório */}
-                  {isSpellcaster && onAddSpellsToGrimoire && (
+                </View>
+
+                {/* Botão para adicionar magias ao grimório */}
+                {isSpellcaster && onAddSpellsToGrimoire && !showSpellSelection && (
+                  <View style={styles.grimoireButtonContainer}>
                     <TouchableOpacity
                       style={[styles.addToGrimoireButton, { backgroundColor: classColor }]}
-                      onPress={() => setShowSpellSelection(!showSpellSelection)}
+                      onPress={handleStartSpellSelection}
                       activeOpacity={0.8}
                     >
-                      <Plus size={16} color="#FFFFFF" />
+                      <Plus size={20} color="#FFFFFF" />
                       <Text style={styles.addToGrimoireButtonText}>
-                        {showSpellSelection ? 'Cancelar' : 'Adicionar ao Grimório'}
+                        Adicionar ao Grimório
                       </Text>
                     </TouchableOpacity>
-                  )}
-                </View>
+                  </View>
+                )}
 
                 {/* Controles de seleção */}
                 {showSpellSelection && (
                   <View style={styles.selectionControls}>
-                    <View style={styles.selectionInfo}>
+                    <View style={styles.selectionHeader}>
+                      <Text style={styles.selectionTitle}>Selecionar Magias para o Grimório</Text>
                       <Text style={styles.selectionText}>
                         {selectedSpells.size} de {classSpells.length} magias selecionadas
                       </Text>
@@ -512,9 +538,12 @@ export function ClassDetailModal({ dndClass, visible, onClose, onAddSpellsToGrim
                         style={[styles.confirmButton, { backgroundColor: classColor }]}
                         onPress={handleAddSelectedSpells}
                         activeOpacity={0.8}
+                        disabled={selectedSpells.size === 0}
                       >
                         <Check size={16} color="#FFFFFF" />
-                        <Text style={styles.confirmButtonText}>Adicionar</Text>
+                        <Text style={styles.confirmButtonText}>
+                          Adicionar ({selectedSpells.size})
+                        </Text>
                       </TouchableOpacity>
                       
                       <TouchableOpacity
@@ -621,7 +650,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
-    justifyContent: 'space-between',
   },
   sectionTitle: {
     fontSize: 18,
@@ -913,35 +941,50 @@ const styles = StyleSheet.create({
   spellsContainer: {
     marginTop: -6,
   },
+  grimoireButtonContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   addToGrimoireButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   addToGrimoireButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
   },
   selectionControls: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F0F8FF',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: '#E8E8E8',
+    borderColor: '#B3D9FF',
   },
-  selectionInfo: {
-    marginBottom: 12,
+  selectionHeader: {
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  selectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 4,
   },
   selectionText: {
     fontSize: 14,
-    color: '#333',
-    fontWeight: '600',
-    textAlign: 'center',
+    color: '#666',
+    fontWeight: '500',
   },
   selectionButtons: {
     flexDirection: 'row',
@@ -954,8 +997,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#D4AF37',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   selectAllButtonText: {
     color: '#D4AF37',
@@ -966,8 +1009,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     gap: 6,
   },
   confirmButtonText: {
@@ -982,8 +1025,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#E8E8E8',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     gap: 6,
   },
   cancelButtonText: {
@@ -1015,6 +1058,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   spellCardWithCheckbox: {
-    opacity: 0.8,
+    opacity: 0.9,
   },
 });
