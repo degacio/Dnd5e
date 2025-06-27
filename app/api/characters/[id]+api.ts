@@ -10,15 +10,20 @@ export async function GET(request: Request, { id }: { id: string }) {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    await supabase.auth.setSession({
-      access_token: token,
-      refresh_token: '',
-    });
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     const { data: character, error } = await supabase
       .from('characters')
       .select('*')
       .eq('id', id)
+      .eq('user_id', user.id)
       .single();
 
     if (error) {
