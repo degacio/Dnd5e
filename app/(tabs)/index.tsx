@@ -109,8 +109,10 @@ export default function SpellsTab() {
         duration: 200,
         useNativeDriver: true,
       }),
-    ]).start();
-    router.push('/characters');
+    ]).start(() => {
+      // Navigate after animation completes
+      router.push('/characters');
+    });
   };
 
   const navigateToClasses = () => {
@@ -126,8 +128,10 @@ export default function SpellsTab() {
         duration: 200,
         useNativeDriver: true,
       }),
-    ]).start();
-    router.push('/classes');
+    ]).start(() => {
+      // Navigate after animation completes
+      router.push('/classes');
+    });
   };
 
   const rotateInterpolate = rotateAnim.interpolate({
