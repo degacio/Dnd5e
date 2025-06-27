@@ -40,7 +40,7 @@ export default function CharactersScreen() {
         return;
       }
 
-      const response = await fetch('/api/characters', {
+      const response = await fetch('/characters', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -71,7 +71,7 @@ export default function CharactersScreen() {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`/api/characters/${characterId}/share`, {
+      const response = await fetch(`/characters/${characterId}/share`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -115,7 +115,7 @@ export default function CharactersScreen() {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`/api/characters/${characterId}/share`, {
+      const response = await fetch(`/characters/${characterId}/share`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -191,7 +191,7 @@ export default function CharactersScreen() {
         }
       };
 
-      const response = await fetch('/api/characters', {
+      const response = await fetch('/characters', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,

@@ -35,7 +35,7 @@ export default function DMViewTab() {
 
     setLoading(true);
     try {
-      const response = await fetch(`/share/${token.trim()}`);
+      const response = await fetch(`/api/share/${token.trim()}`);
       
       if (!response.ok) {
         if (response.status === 404) {
