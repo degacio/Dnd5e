@@ -338,16 +338,13 @@ export default function EditCharacterScreen() {
         return acc;
       }, {} as Record<string, [number, number]>);
 
-      // Convert spells_known to array of strings (spell names only)
-      const spellNames = knownSpells.map(spell => spell.name);
-
       const updateData = {
         name: name.trim(),
         level,
         hp_current: hpCurrent,
         hp_max: hpMax,
         spell_slots: cleanSpellSlots,
-        spells_known: spellNames, // Send only spell names as strings
+        spells_known: knownSpells, // Send the full objects with name and level
         character_data: {
           ...character.character_data,
           stats,
