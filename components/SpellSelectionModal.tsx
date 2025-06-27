@@ -44,25 +44,82 @@ export function SpellSelectionModal({
   const [expandedSchools, setExpandedSchools] = useState<Set<string>>(new Set());
 
   const classSpells = useMemo(() => {
+    console.log('🔍 Loading spells for class:', characterClass.name);
+    
     try {
-      const spellsData = require('@/data/spells.json');
-      return spellsData.filter((spell: Spell) => 
-        spell.classes.includes(characterClass.name) || 
-        (spell.subclasses && spell.subclasses.some(subclass => 
-          characterClass.subclasses.some(classSubclass => 
-            typeof classSubclass === 'string' 
-              ? classSubclass === subclass
-              : classSubclass.name === subclass
-          )
-        ))
-      );
+      // First try to load custom spells if available
+      let spellsData: Spell[] = [];
+      
+      if (Platform.OS === 'web') {
+        const storedSpells = localStorage.getItem('customSpells');
+        if (storedSpells) {
+          console.log('📚 Found custom spells in localStorage');
+          spellsData = JSON.parse(storedSpells);
+        }
+      }
+      
+      // If no custom spells, load the default ones
+      if (spellsData.length === 0) {
+        console.log('📚 Loading default spells from data/spells.json');
+        const defaultSpells = require('@/data/spells.json');
+        
+        // Check if we have the Livro do Jogador data
+        try {
+          const livroDoJogadorData = require('@/data/magias-livro-do-jogador.json');
+          console.log('📖 Found Livro do Jogador data, adapting spells...');
+          
+          const { adaptSpellsFromLivroDoJogador } = require('@/utils/spellAdapter');
+          const adaptedSpells = adaptSpellsFromLivroDoJogador(livroDoJogadorData);
+          
+          if (adaptedSpells && adaptedSpells.length > 0) {
+            console.log('✅ Successfully adapted spells from Livro do Jogador:', adaptedSpells.length);
+            spellsData = adaptedSpells;
+          } else {
+            console.log('⚠️ No adapted spells, using default spells');
+            spellsData = defaultSpells;
+          }
+        } catch (error) {
+          console.log('⚠️ Livro do Jogador data not available, using default spells');
+          spellsData = defaultSpells;
+        }
+      }
+      
+      console.log('📊 Total spells loaded:', spellsData.length);
+      console.log('🎯 Filtering spells for class:', characterClass.name);
+      
+      // Filter spells for this class
+      const filteredSpells = spellsData.filter((spell: Spell) => {
+        // Check if spell is available to this class
+        const isClassSpell = spell.classes && Array.isArray(spell.classes) && 
+          spell.classes.some(className => 
+            className && className.trim().toLowerCase() === characterClass.name.toLowerCase()
+          );
+        
+        // Check if spell is available to any subclass of this class
+        const isSubclassSpell = spell.subclasses && Array.isArray(spell.subclasses) && 
+          spell.subclasses.some(subclass => 
+            characterClass.subclasses.some(classSubclass => 
+              typeof classSubclass === 'string' 
+                ? classSubclass.toLowerCase() === subclass.toLowerCase()
+                : classSubclass.name.toLowerCase() === subclass.toLowerCase()
+            )
+          );
+        
+        return isClassSpell || isSubclassSpell;
+      });
+      
+      console.log('✅ Filtered spells for', characterClass.name + ':', filteredSpells.length);
+      console.log('📋 Sample spells:', filteredSpells.slice(0, 5).map(s => s.name));
+      
+      return filteredSpells;
     } catch (error) {
-      console.error('Erro ao carregar magias da classe:', error);
+      console.error('💥 Error loading spells for class:', error);
       return [];
     }
   }, [characterClass]);
 
   const spellsBySchool = useMemo(() => {
+    console.log('🏫 Grouping spells by school...');
     const groups: Record<string, Spell[]> = {};
     
     classSpells.forEach((spell) => {
@@ -79,6 +136,9 @@ export function SpellSelectionModal({
         return a.name.localeCompare(b.name);
       });
     });
+
+    console.log('🏫 Schools with spells:', Object.keys(groups));
+    console.log('📊 Spells per school:', Object.entries(groups).map(([school, spells]) => `${school}: ${spells.length}`));
 
     return groups;
   }, [classSpells]);
@@ -153,6 +213,16 @@ export function SpellSelectionModal({
     onClose();
   };
 
+  // Debug information
+  console.log('🎨 Rendering SpellSelectionModal with:', {
+    visible,
+    characterClass: characterClass.name,
+    characterName,
+    totalSpells: classSpells.length,
+    schoolsCount: Object.keys(spellsBySchool).length,
+    selectedSpellsCount: selectedSpells.size
+  });
+
   return (
     <>
       <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
@@ -176,36 +246,38 @@ export function SpellSelectionModal({
             <View style={styles.selectionHeader}>
               <BookOpen size={20} color="#8E44AD" />
               <Text style={styles.selectionTitle}>
-                Selecionar Magias ({selectedSpells.size} selecionadas)
+                Magias Disponíveis: {classSpells.length} ({selectedSpells.size} selecionadas)
               </Text>
             </View>
             
-            <View style={styles.selectionButtons}>
-              <TouchableOpacity
-                style={styles.selectAllButton}
-                onPress={handleSelectAll}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.selectAllButtonText}>
-                  {selectedSpells.size === classSpells.length ? 'Desmarcar Todas' : 'Selecionar Todas'}
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.confirmButton,
-                  selectedSpells.size === 0 && styles.confirmButtonDisabled
-                ]}
-                onPress={handleAddSelectedSpells}
-                activeOpacity={0.8}
-                disabled={selectedSpells.size === 0}
-              >
-                <Check size={16} color="#FFFFFF" />
-                <Text style={styles.confirmButtonText}>
-                  Adicionar ({selectedSpells.size})
-                </Text>
-              </TouchableOpacity>
-            </View>
+            {classSpells.length > 0 && (
+              <View style={styles.selectionButtons}>
+                <TouchableOpacity
+                  style={styles.selectAllButton}
+                  onPress={handleSelectAll}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.selectAllButtonText}>
+                    {selectedSpells.size === classSpells.length ? 'Desmarcar Todas' : 'Selecionar Todas'}
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[
+                    styles.confirmButton,
+                    selectedSpells.size === 0 && styles.confirmButtonDisabled
+                  ]}
+                  onPress={handleAddSelectedSpells}
+                  activeOpacity={0.8}
+                  disabled={selectedSpells.size === 0}
+                >
+                  <Check size={16} color="#FFFFFF" />
+                  <Text style={styles.confirmButtonText}>
+                    Adicionar ({selectedSpells.size})
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -278,7 +350,10 @@ export function SpellSelectionModal({
                 <Sparkles size={48} color="#D4AF37" />
                 <Text style={styles.noSpellsTitle}>Nenhuma Magia Disponível</Text>
                 <Text style={styles.noSpellsText}>
-                  Não foram encontradas magias para esta classe.
+                  Não foram encontradas magias para a classe {characterClass.name}.
+                </Text>
+                <Text style={styles.debugText}>
+                  Debug: Verifique se o arquivo de magias está carregado corretamente.
                 </Text>
               </View>
             )}
@@ -347,6 +422,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginLeft: 8,
+    flex: 1,
   },
   selectionButtons: {
     flexDirection: 'row',
@@ -488,5 +564,12 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 20,
+    marginBottom: 8,
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });
