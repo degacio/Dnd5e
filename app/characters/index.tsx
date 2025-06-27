@@ -4,7 +4,7 @@ import { Character } from '@/types/database';
 import { CharacterCard } from '@/components/CharacterCard';
 import { CharacterDetailModal } from '@/components/CharacterDetailModal';
 import { supabase } from '@/lib/supabase';
-import { Shield, User, Plus, RefreshCw, ArrowLeft, Users } from 'lucide-react-native';
+import { Shield, User, Plus, RefreshCw, ArrowLeft, Users, UserPlus } from 'lucide-react-native';
 import { router } from 'expo-router';
 
 export default function CharactersScreen() {
@@ -221,6 +221,10 @@ export default function CharactersScreen() {
     router.push('/characters/classes');
   };
 
+  const navigateToCreateCharacter = () => {
+    router.push('/characters/create');
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
@@ -273,6 +277,15 @@ export default function CharactersScreen() {
           <Users size={24} color="#D4AF37" />
           <Text style={styles.navButtonText}>Ver Classes D&D</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.navButton, styles.createNavButton]}
+          onPress={navigateToCreateCharacter}
+          activeOpacity={0.8}
+        >
+          <UserPlus size={24} color="#FFFFFF" />
+          <Text style={[styles.navButtonText, styles.createNavButtonText]}>Criar Novo Personagem</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -292,15 +305,15 @@ export default function CharactersScreen() {
             <User size={64} color="#D4AF37" />
             <Text style={styles.emptyTitle}>Nenhum Personagem</Text>
             <Text style={styles.emptyText}>
-              Você ainda não possui personagens criados. Clique no botão + para criar um personagem de exemplo.
+              Você ainda não possui personagens criados. Use o botão "Criar Novo Personagem" para começar sua aventura!
             </Text>
             
             <TouchableOpacity 
               style={styles.createButton}
-              onPress={createSampleCharacter}
+              onPress={navigateToCreateCharacter}
             >
-              <Plus size={20} color="#FFFFFF" />
-              <Text style={styles.createButtonText}>Criar Personagem de Exemplo</Text>
+              <UserPlus size={20} color="#FFFFFF" />
+              <Text style={styles.createButtonText}>Criar Meu Primeiro Personagem</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -383,6 +396,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E8E8E8',
+    gap: 12,
   },
   navButton: {
     flexDirection: 'row',
@@ -395,10 +409,17 @@ const styles = StyleSheet.create({
     borderColor: '#D4AF37',
     gap: 12,
   },
+  createNavButton: {
+    backgroundColor: '#27AE60',
+    borderColor: '#27AE60',
+  },
   navButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
+  },
+  createNavButtonText: {
+    color: '#FFFFFF',
   },
   content: {
     flex: 1,
