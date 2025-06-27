@@ -426,13 +426,14 @@ export default function CharactersScreen() {
                   <TouchableOpacity
                     style={styles.addSpellsButton}
                     onPress={() => {
+                      console.log('📚 Add spells button pressed for character:', character.name);
                       setSelectedCharacter(character);
                       openClassModal(character.class_name);
                     }}
                     activeOpacity={0.8}
                   >
                     <BookOpen size={16} color="#8E44AD" />
-                    <Text style={styles.addSpellsButtonText}>Adicionar Magias</Text>
+                    <Text style={styles.addSpellsButtonText}>Adicionar Magias ao Grimório</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -472,7 +473,10 @@ export default function CharactersScreen() {
       <ClassDetailModal
         dndClass={selectedClass}
         visible={!!selectedClass}
-        onClose={() => setSelectedClass(null)}
+        onClose={() => {
+          setSelectedClass(null);
+          setSelectedCharacter(null);
+        }}
         onAddSpellsToGrimoire={handleAddSpellsToGrimoire}
       />
     </SafeAreaView>
@@ -585,14 +589,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#F3E8FF',
     borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     marginHorizontal: 16,
     marginTop: -8,
     marginBottom: 8,
     borderWidth: 1,
     borderColor: '#E0B3FF',
-    gap: 6,
+    gap: 8,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   addSpellsButtonText: {
     color: '#8E44AD',

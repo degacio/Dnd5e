@@ -119,6 +119,9 @@ export function ClassDetailModal({ dndClass, visible, onClose, onAddSpellsToGrim
       // Reset selection and close selection mode
       setSelectedSpells(new Set());
       setShowSpellSelection(false);
+      
+      // Close the modal after adding spells
+      handleClose();
     };
 
     if (Platform.OS === 'web') {
@@ -535,7 +538,11 @@ export function ClassDetailModal({ dndClass, visible, onClose, onAddSpellsToGrim
                       </TouchableOpacity>
                       
                       <TouchableOpacity
-                        style={[styles.confirmButton, { backgroundColor: classColor }]}
+                        style={[
+                          styles.confirmButton, 
+                          { backgroundColor: classColor },
+                          selectedSpells.size === 0 && styles.confirmButtonDisabled
+                        ]}
                         onPress={handleAddSelectedSpells}
                         activeOpacity={0.8}
                         disabled={selectedSpells.size === 0}
@@ -1012,6 +1019,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     gap: 6,
+  },
+  confirmButtonDisabled: {
+    backgroundColor: '#BDC3C7',
   },
   confirmButtonText: {
     color: '#FFFFFF',
