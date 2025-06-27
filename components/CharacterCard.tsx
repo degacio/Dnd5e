@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Character } from '@/types/database';
-import { User, Heart, Zap, Share2, Edit } from 'lucide-react-native';
+import { User, Heart, Zap, Share2, CreditCard as Edit } from 'lucide-react-native';
 import { router } from 'expo-router';
 
 interface CharacterCardProps {
