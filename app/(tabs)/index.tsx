@@ -127,7 +127,7 @@ export default function SpellsTab() {
         useNativeDriver: true,
       }),
     ]).start();
-    router.push('/(tabs)/classes');
+    router.push('/classes');
   };
 
   const rotateInterpolate = rotateAnim.interpolate({
