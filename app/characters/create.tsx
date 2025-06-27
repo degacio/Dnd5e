@@ -23,6 +23,8 @@ import {
   RefreshCw
 } from 'lucide-react-native';
 import { router } from 'expo-router';
+import classesData from '@/data/classes.json';
+import racesData from '@/data/races.json';
 
 interface CharacterStats {
   strength: number;
@@ -97,8 +99,6 @@ export default function CreateCharacterScreen() {
 
   const loadData = async () => {
     try {
-      const classesData = require('@/data/classes.json');
-      const racesData = require('@/data/races.json');
       setClasses(classesData);
       setRaces(racesData);
     } catch (error) {
