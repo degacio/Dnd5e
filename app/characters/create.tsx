@@ -213,11 +213,12 @@ export default function CreateCharacterScreen() {
     try {
       console.log('🔐 Getting session...');
       const { data: { session } } = await supabase.auth.getSession();
-      console.log('📋 Session check:', session ? 'Session exists' : 'No session');
+      console.log('📋 Session check:', session ? `Session exists for ${session.user?.email}` : 'No session');
       
       if (!session) {
         console.log('❌ No session found');
-        Alert.alert('Erro', 'Você precisa estar autenticado para criar personagens.');
+        Alert.alert('Erro', 'Você precisa estar autenticado para criar personagens. Por favor, faça login novamente.');
+        router.replace('/auth');
         return;
       }
 
@@ -261,7 +262,14 @@ export default function CreateCharacterScreen() {
         },
       };
 
-      console.log('🏗️ Character object created:', newCharacter);
+      console.log('🏗️ Character object created:', {
+        name: newCharacter.name,
+        class_name: newCharacter.class_name,
+        level: newCharacter.level,
+        hp_max: newCharacter.hp_max,
+        hasSpellSlots: Object.keys(spellSlots).length > 0
+      });
+      
       console.log('📤 Making API request to /api/characters');
 
       const response = await fetch('/api/characters', {
@@ -278,8 +286,8 @@ export default function CreateCharacterScreen() {
 
       if (response.ok) {
         const createdCharacter = await response.json();
-        console.log('✅ Character created successfully:', createdCharacter);
-        Alert.alert('Sucesso', 'Personagem criado com sucesso!', [
+        console.log('✅ Character created successfully:', createdCharacter.name);
+        Alert.alert('Sucesso', `Personagem ${createdCharacter.name} criado com sucesso!`, [
           {
             text: 'OK',
             onPress: () => {
@@ -291,11 +299,11 @@ export default function CreateCharacterScreen() {
       } else {
         const errorText = await response.text();
         console.log('❌ API Error response:', errorText);
-        Alert.alert('Erro', 'Não foi possível criar o personagem.');
+        Alert.alert('Erro', `Não foi possível criar o personagem: ${errorText}`);
       }
     } catch (error) {
       console.error('💥 Error creating character:', error);
-      Alert.alert('Erro', 'Erro ao criar personagem.');
+      Alert.alert('Erro', `Erro ao criar personagem: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setSaving(false);
       console.log('🔄 Setting saving state to false');
