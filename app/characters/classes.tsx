@@ -3,9 +3,10 @@ import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } fr
 import { DnDClass } from '@/types/dndClass';
 import { ClassCard } from '@/components/ClassCard';
 import { ClassDetailModal } from '@/components/ClassDetailModal';
-import { Shield } from 'lucide-react-native';
+import { Shield, ArrowLeft } from 'lucide-react-native';
+import { router } from 'expo-router';
 
-export default function ClassesTab() {
+export default function ClassesScreen() {
   const [classes, setClasses] = useState<DnDClass[]>([]);
   const [selectedClass, setSelectedClass] = useState<DnDClass | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,6 +26,10 @@ export default function ClassesTab() {
     }
   };
 
+  const goBack = () => {
+    router.back();
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
@@ -37,6 +42,10 @@ export default function ClassesTab() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={goBack}>
+          <ArrowLeft size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        
         <View style={styles.titleContainer}>
           <Shield size={28} color="#D4AF37" />
           <Text style={styles.title}>Classes</Text>
@@ -90,10 +99,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 3,
     borderBottomColor: '#D4AF37',
   },
+  backButton: {
+    position: 'absolute',
+    left: 20,
+    top: 20,
+    zIndex: 1,
+    padding: 4,
+  },
   titleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
+    marginLeft: 40,
   },
   title: {
     fontSize: 24,
@@ -105,6 +122,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#D4AF37',
     fontWeight: '500',
+    marginLeft: 40,
   },
   content: {
     flex: 1,
