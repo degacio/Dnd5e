@@ -1,103 +1,119 @@
-import { supabase } from '@/lib/supabase';
-import { CharacterInsert } from '@/types/database';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.EXPO_PUBLIC_SUPABASE_URL!,
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export async function GET(request: Request) {
   try {
-    console.log('📥 GET /api/characters - Request received');
-    
+    const url = new URL(request.url);
     const authHeader = request.headers.get('Authorization');
-    console.log('🔐 Auth header present:', !!authHeader);
     
     if (!authHeader) {
-      console.log('❌ No authorization header');
-      return new Response('Unauthorized', { status: 401 });
+      return new Response(JSON.stringify({ error: 'No authorization header' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     // Set the auth token for this request
-    const token = authHeader.replace('Bearer ', '');
-    console.log('🎫 Token extracted, length:', token.length);
-    
-    await supabase.auth.setSession({
-      access_token: token,
-      refresh_token: '', // Not needed for this operation
+    supabase.auth.setSession({
+      access_token: authHeader.replace('Bearer ', ''),
+      refresh_token: '',
     });
 
-    console.log('📊 Fetching characters from database...');
     const { data: characters, error } = await supabase
       .from('characters')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('💥 Database error:', error);
-      return new Response('Error fetching characters', { status: 500 });
+      console.error('Database select error:', error);
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    console.log('✅ Characters fetched successfully:', characters?.length || 0);
-    return Response.json(characters);
+    return new Response(JSON.stringify(characters), {
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error) {
-    console.error('💥 API Error:', error);
-    return new Response('Internal server error', { status: 500 });
+    console.error('API error:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
 
 export async function POST(request: Request) {
   try {
-    console.log('📥 POST /api/characters - Request received');
-    
     const authHeader = request.headers.get('Authorization');
-    console.log('🔐 Auth header present:', !!authHeader);
     
     if (!authHeader) {
-      console.log('❌ No authorization header');
-      return new Response('Unauthorized', { status: 401 });
+      return new Response(JSON.stringify({ error: 'No authorization header' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    console.log('🎫 Token extracted, length:', token.length);
+    // Create a new supabase client instance for this request
+    const supabaseWithAuth = createClient(
+      process.env.EXPO_PUBLIC_SUPABASE_URL!,
+      process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: authHeader
+          }
+        }
+      }
+    );
+
+    // Get the current user to ensure we have the correct user_id
+    const { data: { user }, error: userError } = await supabaseWithAuth.auth.getUser();
     
-    // Get user from token
-    console.log('👤 Getting user from token...');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !user) {
-      console.error('💥 Auth error:', authError);
-      return new Response('Unauthorized', { status: 401 });
+    if (userError || !user) {
+      console.error('User authentication error:', userError);
+      return new Response(JSON.stringify({ error: 'User not authenticated' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    console.log('✅ User authenticated:', user.email);
-
-    // Parse request body
-    console.log('📋 Parsing request body...');
     const body = await request.json();
-    console.log('📦 Request body received:', {
-      name: body.name,
-      class_name: body.class_name,
-      level: body.level,
-      user_id: user.id
-    });
-
-    const characterData: CharacterInsert = {
+    
+    // Ensure user_id is set to the authenticated user's ID
+    const characterData = {
       ...body,
-      user_id: user.id,
+      user_id: user.id // Force the user_id to be the authenticated user's ID
     };
 
-    console.log('💾 Inserting character into database...');
-    const { data: character, error } = await supabase
+    const { data: character, error } = await supabaseWithAuth
       .from('characters')
-      .insert(characterData)
+      .insert([characterData])
       .select()
       .single();
 
     if (error) {
       console.error('💥 Database insert error:', error);
-      return new Response(`Database error: ${error.message}`, { status: 500 });
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    console.log('✅ Character created successfully:', character.name);
-    return Response.json(character);
+    return new Response(JSON.stringify(character), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error) {
-    console.error('💥 API Error:', error);
-    return new Response(`Internal server error: ${error.message}`, { status: 500 });
+    console.error('API error:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
