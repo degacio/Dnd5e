@@ -23,8 +23,11 @@ import {
   Sword,
   Clock,
   Eye,
-  EyeOff
+  EyeOff,
+  Edit,
+  BookOpen
 } from 'lucide-react-native';
+import { router } from 'expo-router';
 
 interface CharacterDetailModalProps {
   character: Character | null;
@@ -45,6 +48,11 @@ export function CharacterDetailModal({
   const [isGeneratingToken, setIsGeneratingToken] = useState(false);
 
   if (!character) return null;
+
+  const handleEdit = () => {
+    onClose();
+    router.push(`/characters/edit/${character.id}`);
+  };
 
   const handleGenerateToken = async () => {
     if (!onGenerateToken) return;
@@ -127,6 +135,11 @@ export function CharacterDetailModal({
     return '#E74C3C';
   };
 
+  // Get skills from character data
+  const skills = character.character_data?.skills || {};
+  const proficientSkills = Object.entries(skills).filter(([_, skill]: [string, any]) => skill.proficient);
+  const expertiseSkills = Object.entries(skills).filter(([_, skill]: [string, any]) => skill.expertise);
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <SafeAreaView style={styles.container}>
@@ -138,9 +151,14 @@ export function CharacterDetailModal({
                 {character.class_name} • Nível {character.level}
               </Text>
             </View>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <X size={24} color="#FFFFFF" />
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
+                <Edit size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <X size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -193,20 +211,82 @@ export function CharacterDetailModal({
             </View>
           </View>
 
+          {/* Attributes Section */}
+          {character.character_data?.stats && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Sword size={20} color="#3498DB" />
+                <Text style={styles.sectionTitle}>Atributos</Text>
+              </View>
+              
+              <View style={styles.attributesGrid}>
+                {Object.entries(character.character_data.stats).map(([stat, value]) => (
+                  <View key={stat} style={styles.attributeCard}>
+                    <Text style={styles.attributeName}>
+                      {stat === 'strength' ? 'FOR' :
+                       stat === 'dexterity' ? 'DES' :
+                       stat === 'constitution' ? 'CON' :
+                       stat === 'intelligence' ? 'INT' :
+                       stat === 'wisdom' ? 'SAB' : 'CAR'}
+                    </Text>
+                    <Text style={styles.attributeValue}>{value}</Text>
+                    <Text style={styles.attributeModifier}>
+                      {Math.floor((value - 10) / 2) >= 0 ? '+' : ''}{Math.floor((value - 10) / 2)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Skills Section */}
+          {proficientSkills.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <BookOpen size={20} color="#9B59B6" />
+                <Text style={styles.sectionTitle}>Perícias</Text>
+              </View>
+              
+              <View style={styles.skillsContainer}>
+                {proficientSkills.map(([skillName, skill]: [string, any]) => (
+                  <View key={skillName} style={styles.skillItem}>
+                    <Text style={styles.skillName}>{skillName}</Text>
+                    <View style={styles.skillBadges}>
+                      <View style={styles.proficientBadge}>
+                        <Text style={styles.badgeText}>Proficiente</Text>
+                      </View>
+                      {skill.expertise && (
+                        <View style={styles.expertiseBadge}>
+                          <Text style={styles.badgeText}>Especialista</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
           {/* Spells Section */}
           {character.spells_known && character.spells_known.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Sword size={20} color="#8E44AD" />
-                <Text style={styles.sectionTitle}>Magias Conhecidas</Text>
+                <Text style={styles.sectionTitle}>
+                  Magias Conhecidas ({character.spells_known.length})
+                </Text>
               </View>
               
               <View style={styles.spellsList}>
                 {character.spells_known.map((spell: any, index: number) => (
                   <View key={index} style={styles.spellItem}>
-                    <Text style={styles.spellName}>{spell.name || spell}</Text>
-                    {spell.level && (
-                      <Text style={styles.spellLevel}>Nível {spell.level}</Text>
+                    <Text style={styles.spellName}>
+                      {typeof spell === 'string' ? spell : spell.name}
+                    </Text>
+                    {typeof spell === 'object' && spell.level && (
+                      <View style={styles.spellLevelBadge}>
+                        <Text style={styles.spellLevelText}>Nv. {spell.level}</Text>
+                      </View>
                     )}
                   </View>
                 ))}
@@ -320,6 +400,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'rgba(255, 255, 255, 0.9)',
   },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  editButton: {
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+  },
   closeButton: {
     padding: 4,
   },
@@ -401,6 +490,71 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
+  attributesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  attributeCard: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    padding: 12,
+    width: '30%',
+    alignItems: 'center',
+  },
+  attributeName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 4,
+  },
+  attributeValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+  },
+  attributeModifier: {
+    fontSize: 12,
+    color: '#666',
+  },
+  skillsContainer: {
+    gap: 8,
+  },
+  skillItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    padding: 12,
+  },
+  skillName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+    flex: 1,
+  },
+  skillBadges: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  proficientBadge: {
+    backgroundColor: '#D4AF37',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  expertiseBadge: {
+    backgroundColor: '#8E44AD',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  badgeText: {
+    fontSize: 10,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
   spellsList: {
     gap: 8,
   },
@@ -418,13 +572,16 @@ const styles = StyleSheet.create({
     color: '#333',
     flex: 1,
   },
-  spellLevel: {
-    fontSize: 12,
-    color: '#666',
-    backgroundColor: '#E8E8E8',
+  spellLevelBadge: {
+    backgroundColor: '#8E44AD',
+    borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 10,
+  },
+  spellLevelText: {
+    fontSize: 10,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   tokenContainer: {
     gap: 16,

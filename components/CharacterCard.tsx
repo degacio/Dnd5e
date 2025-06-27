@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Character } from '@/types/database';
-import { User, Heart, Zap, Share2 } from 'lucide-react-native';
+import { User, Heart, Zap, Share2, Edit } from 'lucide-react-native';
+import { router } from 'expo-router';
 
 interface CharacterCardProps {
   character: Character;
@@ -19,6 +20,10 @@ export function CharacterCard({ character, onPress, onShare }: CharacterCardProp
     return '#E74C3C';
   };
 
+  const handleEdit = () => {
+    router.push(`/characters/edit/${character.id}`);
+  };
+
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.header}>
@@ -32,15 +37,25 @@ export function CharacterCard({ character, onPress, onShare }: CharacterCardProp
           </View>
         </View>
         
-        {onShare && (
+        <View style={styles.actionButtons}>
           <TouchableOpacity 
-            style={styles.shareButton} 
-            onPress={onShare}
+            style={styles.actionButton} 
+            onPress={handleEdit}
             activeOpacity={0.7}
           >
-            <Share2 size={20} color="#666" />
+            <Edit size={18} color="#666" />
           </TouchableOpacity>
-        )}
+          
+          {onShare && (
+            <TouchableOpacity 
+              style={styles.actionButton} 
+              onPress={onShare}
+              activeOpacity={0.7}
+            >
+              <Share2 size={18} color="#666" />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <View style={styles.statsContainer}>
@@ -58,7 +73,10 @@ export function CharacterCard({ character, onPress, onShare }: CharacterCardProp
             <Text style={styles.statLabel}>Magias</Text>
             <Text style={styles.statValue}>
               {Object.values(character.spell_slots).reduce((total: number, slots: any) => 
-                total + (Array.isArray(slots) ? slots.reduce((a: number, b: number) => a + b, 0) : 0), 0
+                total + (Array.isArray(slots) ? slots[0] : 0), 0
+              )}/
+              {Object.values(character.spell_slots).reduce((total: number, slots: any) => 
+                total + (Array.isArray(slots) ? slots[1] : 0), 0
               )}
             </Text>
           </View>
@@ -130,7 +148,11 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: '500',
   },
-  shareButton: {
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
     padding: 8,
     borderRadius: 8,
     backgroundColor: '#F8F9FA',
