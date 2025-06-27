@@ -4,7 +4,7 @@ import { Character } from '@/types/database';
 import { Spell } from '@/types/spell';
 import { CharacterCard } from '@/components/CharacterCard';
 import { CharacterDetailModal } from '@/components/CharacterDetailModal';
-import { ClassDetailModal } from '@/components/ClassDetailModal';
+import { SpellSelectionModal } from '@/components/SpellSelectionModal';
 import { supabase } from '@/lib/supabase';
 import { Shield, User, Plus, RefreshCw, ArrowLeft, Users, UserPlus, BookOpen } from 'lucide-react-native';
 import { router } from 'expo-router';
@@ -13,7 +13,7 @@ import classesData from '@/data/classes.json';
 export default function CharactersScreen() {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
-  const [selectedClass, setSelectedClass] = useState<any>(null);
+  const [spellSelectionCharacter, setSpellSelectionCharacter] = useState<Character | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -150,7 +150,7 @@ export default function CharactersScreen() {
   };
 
   const handleAddSpellsToGrimoire = async (spells: Spell[]) => {
-    if (!selectedCharacter) {
+    if (!spellSelectionCharacter) {
       Alert.alert('Erro', 'Nenhum personagem selecionado.');
       return;
     }
@@ -164,7 +164,7 @@ export default function CharactersScreen() {
       }
 
       // Get current spells known
-      const currentSpells = selectedCharacter.spells_known || [];
+      const currentSpells = spellSelectionCharacter.spells_known || [];
       
       // Convert current spells to consistent format
       const currentSpellNames = currentSpells.map((spell: any) => 
@@ -191,7 +191,7 @@ export default function CharactersScreen() {
       const updatedSpells = [...currentSpells, ...spellsToAdd];
 
       // Update character
-      const response = await fetch(`/api/characters/${selectedCharacter.id}`, {
+      const response = await fetch(`/api/characters/${spellSelectionCharacter.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -207,14 +207,17 @@ export default function CharactersScreen() {
         
         // Update local state
         setCharacters(prev => prev.map(char => 
-          char.id === selectedCharacter.id ? updatedCharacter : char
+          char.id === spellSelectionCharacter.id ? updatedCharacter : char
         ));
         
-        setSelectedCharacter(updatedCharacter);
+        // Update selected character if it's the same one
+        if (selectedCharacter?.id === spellSelectionCharacter.id) {
+          setSelectedCharacter(updatedCharacter);
+        }
         
         Alert.alert(
           'Sucesso', 
-          `${newSpells.length} magia(s) adicionada(s) ao grimório de ${selectedCharacter.name}!`
+          `${newSpells.length} magia(s) adicionada(s) ao grimório de ${spellSelectionCharacter.name}!`
         );
       } else {
         const errorText = await response.text();
@@ -227,11 +230,9 @@ export default function CharactersScreen() {
     }
   };
 
-  const openClassModal = (className: string) => {
-    const dndClass = classesData.find(cls => cls.name === className);
-    if (dndClass) {
-      setSelectedClass(dndClass);
-    }
+  const openSpellSelection = (character: Character) => {
+    console.log('📚 Opening spell selection for character:', character.name);
+    setSpellSelectionCharacter(character);
   };
 
   const createSampleCharacter = async () => {
@@ -413,31 +414,35 @@ export default function CharactersScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {characters.length > 0 ? (
           <View style={styles.charactersContainer}>
-            {characters.map((character) => (
-              <View key={character.id} style={styles.characterCardWrapper}>
-                <CharacterCard
-                  character={character}
-                  onPress={() => setSelectedCharacter(character)}
-                  onShare={() => setSelectedCharacter(character)}
-                />
-                
-                {/* Botão para adicionar magias ao grimório */}
-                {character.class_name && classesData.find(cls => cls.name === character.class_name)?.spellcasting && (
-                  <TouchableOpacity
-                    style={styles.addSpellsButton}
-                    onPress={() => {
-                      console.log('📚 Add spells button pressed for character:', character.name);
-                      setSelectedCharacter(character);
-                      openClassModal(character.class_name);
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <BookOpen size={16} color="#8E44AD" />
-                    <Text style={styles.addSpellsButtonText}>Adicionar Magias ao Grimório</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))}
+            {characters.map((character) => {
+              const characterClass = classesData.find(cls => cls.name === character.class_name);
+              const isSpellcaster = characterClass?.spellcasting;
+              
+              return (
+                <View key={character.id} style={styles.characterCardWrapper}>
+                  <CharacterCard
+                    character={character}
+                    onPress={() => setSelectedCharacter(character)}
+                    onShare={() => setSelectedCharacter(character)}
+                  />
+                  
+                  {/* Botão para adicionar magias ao grimório */}
+                  {isSpellcaster && (
+                    <TouchableOpacity
+                      style={styles.addSpellsButton}
+                      onPress={() => {
+                        console.log('📚 Add spells button pressed for character:', character.name);
+                        openSpellSelection(character);
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <BookOpen size={16} color="#8E44AD" />
+                      <Text style={styles.addSpellsButtonText}>Adicionar Magias ao Grimório</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })}
           </View>
         ) : (
           <View style={styles.emptyContainer}>
@@ -464,20 +469,18 @@ export default function CharactersScreen() {
 
       <CharacterDetailModal
         character={selectedCharacter}
-        visible={!!selectedCharacter && !selectedClass}
+        visible={!!selectedCharacter}
         onClose={() => setSelectedCharacter(null)}
         onGenerateToken={handleGenerateToken}
         onRevokeToken={handleRevokeToken}
       />
 
-      <ClassDetailModal
-        dndClass={selectedClass}
-        visible={!!selectedClass}
-        onClose={() => {
-          setSelectedClass(null);
-          setSelectedCharacter(null);
-        }}
-        onAddSpellsToGrimoire={handleAddSpellsToGrimoire}
+      <SpellSelectionModal
+        visible={!!spellSelectionCharacter}
+        onClose={() => setSpellSelectionCharacter(null)}
+        characterClass={spellSelectionCharacter ? classesData.find(cls => cls.name === spellSelectionCharacter.class_name)! : {} as any}
+        characterName={spellSelectionCharacter?.name || ''}
+        onAddSpells={handleAddSpellsToGrimoire}
       />
     </SafeAreaView>
   );

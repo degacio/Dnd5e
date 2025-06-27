@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -7,8 +7,6 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Alert,
-  Platform,
 } from 'react-native';
 import { DnDClass, ClassColors } from '@/types/dndClass';
 import { Spell } from '@/types/spell';
@@ -26,24 +24,18 @@ import {
   Sparkles,
   ChevronDown,
   ChevronRight,
-  Scroll,
-  Plus,
-  Check,
-  Minus
+  Scroll
 } from 'lucide-react-native';
 
 interface ClassDetailModalProps {
   dndClass: DnDClass | null;
   visible: boolean;
   onClose: () => void;
-  onAddSpellsToGrimoire?: (spells: Spell[]) => void;
 }
 
-export function ClassDetailModal({ dndClass, visible, onClose, onAddSpellsToGrimoire }: ClassDetailModalProps) {
+export function ClassDetailModal({ dndClass, visible, onClose }: ClassDetailModalProps) {
   const [selectedSpell, setSelectedSpell] = useState<Spell | null>(null);
   const [expandedSubclasses, setExpandedSubclasses] = useState<Set<string>>(new Set());
-  const [selectedSpells, setSelectedSpells] = useState<Set<string>>(new Set());
-  const [showSpellSelection, setShowSpellSelection] = useState(false);
   
   const classSpells = useMemo(() => {
     if (!dndClass) return [];
@@ -76,91 +68,10 @@ export function ClassDetailModal({ dndClass, visible, onClose, onAddSpellsToGrim
     setExpandedSubclasses(newExpanded);
   };
 
-  const toggleSpellSelection = (spellId: string) => {
-    const newSelected = new Set(selectedSpells);
-    if (newSelected.has(spellId)) {
-      newSelected.delete(spellId);
-    } else {
-      newSelected.add(spellId);
-    }
-    setSelectedSpells(newSelected);
-  };
-
-  const handleStartSpellSelection = () => {
-    console.log('🎯 Starting spell selection mode...');
-    setShowSpellSelection(true);
-    setSelectedSpells(new Set());
-  };
-
-  const handleAddSelectedSpells = () => {
-    console.log('🎯 Adding selected spells to grimoire...', selectedSpells.size);
-    
-    if (selectedSpells.size === 0) {
-      const message = 'Selecione pelo menos uma magia para adicionar ao grimório.';
-      if (Platform.OS === 'web') {
-        alert(`Aviso: ${message}`);
-      } else {
-        Alert.alert('Aviso', message);
-      }
-      return;
-    }
-
-    const spellsToAdd = classSpells.filter(spell => selectedSpells.has(spell.id));
-    console.log('📚 Spells to add:', spellsToAdd.map(s => s.name));
-    
-    const confirmMessage = `Adicionar ${spellsToAdd.length} magia(s) ao grimório?`;
-    
-    const performAdd = () => {
-      console.log('✅ Confirming spell addition...');
-      if (onAddSpellsToGrimoire) {
-        onAddSpellsToGrimoire(spellsToAdd);
-      }
-      
-      // Reset selection and close selection mode
-      setSelectedSpells(new Set());
-      setShowSpellSelection(false);
-      
-      // Close the modal after adding spells
-      handleClose();
-    };
-
-    if (Platform.OS === 'web') {
-      if (confirm(`Confirmar: ${confirmMessage}`)) {
-        performAdd();
-      }
-    } else {
-      Alert.alert(
-        'Confirmar',
-        confirmMessage,
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Adicionar', onPress: performAdd }
-        ]
-      );
-    }
-  };
-
-  const handleSelectAll = () => {
-    if (selectedSpells.size === classSpells.length) {
-      // Deselect all
-      setSelectedSpells(new Set());
-    } else {
-      // Select all
-      setSelectedSpells(new Set(classSpells.map(spell => spell.id)));
-    }
-  };
-
-  const handleCancelSelection = () => {
-    console.log('❌ Cancelling spell selection...');
-    setSelectedSpells(new Set());
-    setShowSpellSelection(false);
-  };
-
   // Reset states when modal closes
   const handleClose = () => {
-    setSelectedSpells(new Set());
-    setShowSpellSelection(false);
     setSelectedSpell(null);
+    setExpandedSubclasses(new Set());
     onClose();
   };
 
@@ -172,18 +83,7 @@ export function ClassDetailModal({ dndClass, visible, onClose, onAddSpellsToGrim
   if (!dndClass) return null;
 
   const classColor = ClassColors[dndClass.name as keyof typeof ClassColors] || '#666';
-  const isSpellcaster = !!dndClass.spellcasting;
   const hasSpells = classSpells.length > 0;
-
-  console.log('🎨 Rendering ClassDetailModal:', {
-    className: dndClass.name,
-    isSpellcaster,
-    hasSpells,
-    spellCount: classSpells.length,
-    showSpellSelection,
-    selectedSpellsCount: selectedSpells.size,
-    hasGrimoireCallback: !!onAddSpellsToGrimoire
-  });
 
   return (
     <>
@@ -499,97 +399,14 @@ export function ClassDetailModal({ dndClass, visible, onClose, onAddSpellsToGrim
                     Magias da Classe ({classSpells.length})
                   </Text>
                 </View>
-
-                {/* Botão para adicionar magias ao grimório */}
-                {isSpellcaster && onAddSpellsToGrimoire && !showSpellSelection && (
-                  <View style={styles.grimoireButtonContainer}>
-                    <TouchableOpacity
-                      style={[styles.addToGrimoireButton, { backgroundColor: classColor }]}
-                      onPress={handleStartSpellSelection}
-                      activeOpacity={0.8}
-                    >
-                      <Plus size={20} color="#FFFFFF" />
-                      <Text style={styles.addToGrimoireButtonText}>
-                        Adicionar ao Grimório
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-
-                {/* Controles de seleção */}
-                {showSpellSelection && (
-                  <View style={styles.selectionControls}>
-                    <View style={styles.selectionHeader}>
-                      <Text style={styles.selectionTitle}>Selecionar Magias para o Grimório</Text>
-                      <Text style={styles.selectionText}>
-                        {selectedSpells.size} de {classSpells.length} magias selecionadas
-                      </Text>
-                    </View>
-                    
-                    <View style={styles.selectionButtons}>
-                      <TouchableOpacity
-                        style={styles.selectAllButton}
-                        onPress={handleSelectAll}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.selectAllButtonText}>
-                          {selectedSpells.size === classSpells.length ? 'Desmarcar Todas' : 'Selecionar Todas'}
-                        </Text>
-                      </TouchableOpacity>
-                      
-                      <TouchableOpacity
-                        style={[
-                          styles.confirmButton, 
-                          { backgroundColor: classColor },
-                          selectedSpells.size === 0 && styles.confirmButtonDisabled
-                        ]}
-                        onPress={handleAddSelectedSpells}
-                        activeOpacity={0.8}
-                        disabled={selectedSpells.size === 0}
-                      >
-                        <Check size={16} color="#FFFFFF" />
-                        <Text style={styles.confirmButtonText}>
-                          Adicionar ({selectedSpells.size})
-                        </Text>
-                      </TouchableOpacity>
-                      
-                      <TouchableOpacity
-                        style={styles.cancelButton}
-                        onPress={handleCancelSelection}
-                        activeOpacity={0.8}
-                      >
-                        <X size={16} color="#666" />
-                        <Text style={styles.cancelButtonText}>Cancelar</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                )}
                 
                 <View style={styles.spellsContainer}>
                   {classSpells.map((spell) => (
-                    <View key={spell.id} style={styles.spellCardContainer}>
-                      {showSpellSelection && (
-                        <TouchableOpacity
-                          style={[
-                            styles.spellCheckbox,
-                            selectedSpells.has(spell.id) && styles.spellCheckboxSelected
-                          ]}
-                          onPress={() => toggleSpellSelection(spell.id)}
-                          activeOpacity={0.8}
-                        >
-                          {selectedSpells.has(spell.id) && (
-                            <Check size={16} color="#FFFFFF" />
-                          )}
-                        </TouchableOpacity>
-                      )}
-                      
-                      <View style={[styles.spellCardWrapper, showSpellSelection && styles.spellCardWithCheckbox]}>
-                        <SpellCard
-                          spell={spell}
-                          onPress={() => !showSpellSelection && setSelectedSpell(spell)}
-                        />
-                      </View>
-                    </View>
+                    <SpellCard
+                      key={spell.id}
+                      spell={spell}
+                      onPress={() => setSelectedSpell(spell)}
+                    />
                   ))}
                 </View>
               </View>
@@ -947,127 +764,5 @@ const styles = StyleSheet.create({
   },
   spellsContainer: {
     marginTop: -6,
-  },
-  grimoireButtonContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  addToGrimoireButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  addToGrimoireButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  selectionControls: {
-    backgroundColor: '#F0F8FF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: '#B3D9FF',
-  },
-  selectionHeader: {
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  selectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 4,
-  },
-  selectionText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  selectionButtons: {
-    flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-  },
-  selectAllButton: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#D4AF37',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  selectAllButtonText: {
-    color: '#D4AF37',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  confirmButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 6,
-  },
-  confirmButtonDisabled: {
-    backgroundColor: '#BDC3C7',
-  },
-  confirmButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  cancelButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#E8E8E8',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 6,
-  },
-  cancelButtonText: {
-    color: '#666',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  spellCardContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  spellCheckbox: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#E8E8E8',
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  spellCheckboxSelected: {
-    backgroundColor: '#27AE60',
-    borderColor: '#27AE60',
-  },
-  spellCardWrapper: {
-    flex: 1,
-  },
-  spellCardWithCheckbox: {
-    opacity: 0.9,
   },
 });
