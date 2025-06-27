@@ -44,6 +44,12 @@ export function SpellSelectionModal({
   const [expandedSchools, setExpandedSchools] = useState<Set<string>>(new Set());
 
   const classSpells = useMemo(() => {
+    // Add null/undefined checks for characterClass and its name property
+    if (!characterClass || !characterClass.name) {
+      console.log('⚠️ characterClass or characterClass.name is undefined');
+      return [];
+    }
+
     console.log('🔍 Loading spells for class:', characterClass.name);
     
     try {
@@ -97,11 +103,12 @@ export function SpellSelectionModal({
         
         // Check if spell is available to any subclass of this class
         const isSubclassSpell = spell.subclasses && Array.isArray(spell.subclasses) && 
+          characterClass.subclasses && Array.isArray(characterClass.subclasses) &&
           spell.subclasses.some(subclass => 
             characterClass.subclasses.some(classSubclass => 
               typeof classSubclass === 'string' 
                 ? classSubclass.toLowerCase() === subclass.toLowerCase()
-                : classSubclass.name.toLowerCase() === subclass.toLowerCase()
+                : classSubclass && classSubclass.name && classSubclass.name.toLowerCase() === subclass.toLowerCase()
             )
           );
         
@@ -216,7 +223,7 @@ export function SpellSelectionModal({
   // Debug information
   console.log('🎨 Rendering SpellSelectionModal with:', {
     visible,
-    characterClass: characterClass.name,
+    characterClass: characterClass?.name || 'undefined',
     characterName,
     totalSpells: classSpells.length,
     schoolsCount: Object.keys(spellsBySchool).length,
@@ -232,7 +239,7 @@ export function SpellSelectionModal({
               <View style={styles.titleSection}>
                 <Text style={styles.title}>Adicionar Magias</Text>
                 <Text style={styles.subtitle}>
-                  {characterName} • {characterClass.name}
+                  {characterName} • {characterClass?.name || 'Classe não definida'}
                 </Text>
               </View>
               <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
@@ -350,7 +357,7 @@ export function SpellSelectionModal({
                 <Sparkles size={48} color="#D4AF37" />
                 <Text style={styles.noSpellsTitle}>Nenhuma Magia Disponível</Text>
                 <Text style={styles.noSpellsText}>
-                  Não foram encontradas magias para a classe {characterClass.name}.
+                  Não foram encontradas magias para a classe {characterClass?.name || 'não definida'}.
                 </Text>
                 <Text style={styles.debugText}>
                   Debug: Verifique se o arquivo de magias está carregado corretamente.
