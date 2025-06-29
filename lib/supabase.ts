@@ -1,8 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/types/database';
+import Constants from 'expo-constants';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+// Get environment variables from Expo Constants for proper Metro bundling
+const supabaseUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 let supabase: ReturnType<typeof createClient<Database>>;
 let supabaseAdmin: ReturnType<typeof createClient<Database>> | null;
@@ -33,7 +35,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   });
 
   // Service role client for server-side operations
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseServiceKey = Constants.expoConfig?.extra?.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   supabaseAdmin = supabaseServiceKey 
     ? createClient<Database>(supabaseUrl, supabaseServiceKey, {
