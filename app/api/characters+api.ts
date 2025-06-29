@@ -153,6 +153,21 @@ export async function POST(request: Request) {
       });
     }
 
+    // Additional defensive check for user and user.id
+    if (!user || !user.id) {
+      console.error('💥 Critical: User object is null or missing ID after validation:', { 
+        userExists: !!user, 
+        hasId: user ? !!user.id : false 
+      });
+      return new Response(JSON.stringify({ 
+        error: 'Internal server error',
+        message: 'User validation failed - invalid user state'
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     console.log('✅ User authenticated for POST:', { userId: user.id, email: user.email });
 
     // Parse request body
