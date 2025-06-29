@@ -11,15 +11,26 @@ import {
 import { Spell, School, SchoolColors } from '@/types/spell';
 import { SpellCard } from './SpellCard';
 import { SpellDetailModal } from './SpellDetailModal';
-import { Search, BookOpen, Filter, X } from 'lucide-react-native';
+import { Search, BookOpen, Filter, X, Sparkles } from 'lucide-react-native';
 
 interface SpellListProps {
   spells: Spell[];
 }
 
+interface SpellListItem {
+  type: 'header' | 'spell';
+  level?: number;
+  spell?: Spell;
+  id: string;
+}
+
 // Helper functions moved outside the component to avoid initialization issues
 const getLevelName = (level: number): string => {
   return level === 0 ? 'Truque' : `${level}º Círculo`;
+};
+
+const getLevelHeaderName = (level: number): string => {
+  return level === 0 ? 'Truques' : `Magias de Nível ${level}`;
 };
 
 const getLevelColor = (level: number): string => {
@@ -89,6 +100,33 @@ export function SpellList({ spells }: SpellListProps) {
     });
   }, [spells, searchText, selectedClass]);
 
+  // Create list items with headers
+  const listItems = useMemo(() => {
+    const items: SpellListItem[] = [];
+    let currentLevel = -1;
+
+    filteredAndSortedSpells.forEach((spell, index) => {
+      // Add header when level changes
+      if (spell.level !== currentLevel) {
+        currentLevel = spell.level;
+        items.push({
+          type: 'header',
+          level: currentLevel,
+          id: `header-${currentLevel}`,
+        });
+      }
+
+      // Add spell item
+      items.push({
+        type: 'spell',
+        spell,
+        id: spell.id,
+      });
+    });
+
+    return items;
+  }, [filteredAndSortedSpells]);
+
   const selectClass = (className: string | null) => {
     setSelectedClass(className);
     setShowClassFilter(false);
@@ -96,42 +134,62 @@ export function SpellList({ spells }: SpellListProps) {
 
   const totalSpells = filteredAndSortedSpells.length;
 
-  const renderSpellItem = ({ item }: { item: Spell }) => (
-    <TouchableOpacity
-      style={styles.spellItem}
-      onPress={() => setSelectedSpell(item)}
-      activeOpacity={0.8}
-    >
-      <View style={styles.spellHeader}>
-        <View style={[styles.levelBadge, { backgroundColor: getLevelColor(item.level) }]}>
-          <Text style={styles.levelText}>
-            {item.level === 0 ? 'T' : item.level.toString()}
+  const renderItem = ({ item }: { item: SpellListItem }) => {
+    if (item.type === 'header') {
+      const levelColor = getLevelColor(item.level!);
+      return (
+        <View style={[styles.levelHeader, { backgroundColor: levelColor }]}>
+          <Sparkles size={16} color="#FFFFFF" />
+          <Text style={styles.levelHeaderText}>
+            {getLevelHeaderName(item.level!)}
           </Text>
+          <View style={styles.levelHeaderBadge}>
+            <Text style={styles.levelHeaderBadgeText}>
+              {filteredAndSortedSpells.filter(s => s.level === item.level).length}
+            </Text>
+          </View>
         </View>
-        
-        <View style={styles.spellContent}>
-          <View style={styles.spellTitleRow}>
-            <Text style={styles.spellName}>{item.name}</Text>
-            <View style={[styles.schoolBadge, { backgroundColor: SchoolColors[item.school as keyof typeof SchoolColors] }]}>
-              <Text style={styles.schoolText}>{item.school}</Text>
+      );
+    }
+
+    const spell = item.spell!;
+    return (
+      <TouchableOpacity
+        style={styles.spellItem}
+        onPress={() => setSelectedSpell(spell)}
+        activeOpacity={0.8}
+      >
+        <View style={styles.spellHeader}>
+          <View style={[styles.levelBadge, { backgroundColor: getLevelColor(spell.level) }]}>
+            <Text style={styles.levelText}>
+              {spell.level === 0 ? 'T' : spell.level.toString()}
+            </Text>
+          </View>
+          
+          <View style={styles.spellContent}>
+            <View style={styles.spellTitleRow}>
+              <Text style={styles.spellName}>{spell.name}</Text>
+              <View style={[styles.schoolBadge, { backgroundColor: SchoolColors[spell.school as keyof typeof SchoolColors] }]}>
+                <Text style={styles.schoolText}>{spell.school}</Text>
+              </View>
             </View>
+            
+            <View style={styles.spellMetaRow}>
+              <Text style={styles.levelName}>{getLevelName(spell.level)}</Text>
+              <Text style={styles.separator}>•</Text>
+              <Text style={styles.spellDetails}>{spell.castingTime}</Text>
+              <Text style={styles.separator}>•</Text>
+              <Text style={styles.spellDetails}>{spell.range}</Text>
+            </View>
+            
+            <Text style={styles.classesText} numberOfLines={1}>
+              {spell.classes.join(', ')}
+            </Text>
           </View>
-          
-          <View style={styles.spellMetaRow}>
-            <Text style={styles.levelName}>{getLevelName(item.level)}</Text>
-            <Text style={styles.separator}>•</Text>
-            <Text style={styles.spellDetails}>{item.castingTime}</Text>
-            <Text style={styles.separator}>•</Text>
-            <Text style={styles.spellDetails}>{item.range}</Text>
-          </View>
-          
-          <Text style={styles.classesText} numberOfLines={1}>
-            {item.classes.join(', ')}
-          </Text>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -176,12 +234,18 @@ export function SpellList({ spells }: SpellListProps) {
       </View>
 
       <FlatList
-        data={filteredAndSortedSpells}
+        data={listItems}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
-        renderItem={renderSpellItem}
+        renderItem={renderItem}
         contentContainerStyle={styles.listContent}
-        ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
+        getItemLayout={(data, index) => {
+          const item = data?.[index];
+          if (item?.type === 'header') {
+            return { length: 44, offset: index * 44, index };
+          }
+          return { length: 88, offset: index * 88, index };
+        }}
       />
 
       {/* Class Filter Modal */}
@@ -343,13 +407,49 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   listContent: {
-    padding: 8,
     paddingBottom: 16,
+  },
+  levelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginHorizontal: 8,
+    marginTop: 8,
+    marginBottom: 4,
+    borderRadius: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  levelHeaderText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginLeft: 8,
+    flex: 1,
+  },
+  levelHeaderBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    minWidth: 24,
+    alignItems: 'center',
+  },
+  levelHeaderBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   spellItem: {
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     padding: 12,
+    marginHorizontal: 8,
+    marginVertical: 2,
     elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -357,9 +457,6 @@ const styles = StyleSheet.create({
     shadowRadius: 1,
     borderLeftWidth: 3,
     borderLeftColor: '#D4AF37',
-  },
-  itemSeparator: {
-    height: 6,
   },
   spellHeader: {
     flexDirection: 'row',
