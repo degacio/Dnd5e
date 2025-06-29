@@ -191,6 +191,49 @@ export async function DELETE(request: Request, { id }: { id: string }) {
     });
   } catch (error) {
     console.error('API Error:', error);
+    
+    // Handle network errors by checking if the character was actually deleted
+    if (error instanceof Error && error.message.includes('fetch failed')) {
+      try {
+        const authHeader = request.headers.get('Authorization');
+        if (authHeader) {
+          const supabase = createAuthenticatedClient(authHeader);
+          const { data: { user } } = await supabase.auth.getUser();
+          
+          if (user) {
+            // Check if the character still exists
+            const { data: character, error: checkError } = await supabase
+              .from('characters')
+              .select('id')
+              .eq('id', id)
+              .eq('user_id', user.id)
+              .single();
+            
+            // If character is not found, deletion was successful
+            if (checkError && checkError.code === 'PGRST116') {
+              return new Response(JSON.stringify({ message: 'Character deleted successfully' }), { 
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+              });
+            }
+            
+            // If character still exists, deletion failed
+            if (character) {
+              return new Response(JSON.stringify({ 
+                error: 'Failed to delete character',
+                message: 'Character deletion was not completed'
+              }), { 
+                status: 500,
+                headers: { 'Content-Type': 'application/json' }
+              });
+            }
+          }
+        }
+      } catch (recheckError) {
+        console.error('Error during deletion recheck:', recheckError);
+      }
+    }
+    
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
       message: error instanceof Error ? error.message : 'Unknown error'
