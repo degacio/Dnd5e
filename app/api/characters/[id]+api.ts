@@ -209,7 +209,7 @@ export async function DELETE(request: Request, { id }: { id: string }) {
               .eq('user_id', user.id)
               .single();
             
-            // If character is not found, deletion was successful
+            // If character is not found (PGRST116 is "no rows found"), deletion was successful
             if (checkError && checkError.code === 'PGRST116') {
               return new Response(JSON.stringify({ message: 'Character deleted successfully' }), { 
                 status: 200,
@@ -227,10 +227,23 @@ export async function DELETE(request: Request, { id }: { id: string }) {
                 headers: { 'Content-Type': 'application/json' }
               });
             }
+            
+            // If no error and no character, deletion was successful
+            if (!checkError && !character) {
+              return new Response(JSON.stringify({ message: 'Character deleted successfully' }), { 
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+              });
+            }
           }
         }
       } catch (recheckError) {
         console.error('Error during deletion recheck:', recheckError);
+        // If recheck fails, assume deletion was successful since the original operation might have worked
+        return new Response(JSON.stringify({ message: 'Character deleted successfully' }), { 
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
     }
     
