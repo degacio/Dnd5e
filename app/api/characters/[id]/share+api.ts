@@ -9,8 +9,8 @@ async function validateUserFromToken(authHeader: string) {
 
     const token = authHeader.replace('Bearer ', '');
     
-    // Use admin client to validate the token - use admin.getUser for server-side JWT validation
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserByAccessToken(token);
+    // Use getUser() method which validates the JWT token
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     
     if (userError) {
       console.error('User validation error:', userError);
