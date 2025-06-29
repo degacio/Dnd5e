@@ -36,11 +36,18 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 // Service role client for server-side operations
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+if (!supabaseServiceKey) {
+  console.error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable');
+}
+
 export const supabaseAdmin = supabaseServiceKey 
   ? createClient<Database>(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
+      },
+      global: {
+        fetch: fetch,
       },
     })
   : null;

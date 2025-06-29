@@ -5,7 +5,7 @@ import { CharacterUpdate } from '@/types/database';
 async function validateUserFromToken(authHeader: string) {
   try {
     if (!supabaseAdmin) {
-      throw new Error('Supabase admin client not available');
+      throw new Error('Supabase admin client not available - check SUPABASE_SERVICE_ROLE_KEY');
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -33,7 +33,11 @@ async function validateUserFromToken(authHeader: string) {
 export async function GET(request: Request, { id }: { id: string }) {
   try {
     if (!supabaseAdmin) {
-      return new Response(JSON.stringify({ error: 'Server configuration error' }), { 
+      console.error('Supabase admin client not initialized - missing SUPABASE_SERVICE_ROLE_KEY');
+      return new Response(JSON.stringify({ 
+        error: 'Server configuration error',
+        details: 'Supabase admin client not available'
+      }), { 
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -94,7 +98,11 @@ export async function GET(request: Request, { id }: { id: string }) {
 export async function PUT(request: Request, { id }: { id: string }) {
   try {
     if (!supabaseAdmin) {
-      return new Response(JSON.stringify({ error: 'Server configuration error' }), { 
+      console.error('Supabase admin client not initialized - missing SUPABASE_SERVICE_ROLE_KEY');
+      return new Response(JSON.stringify({ 
+        error: 'Server configuration error',
+        details: 'Supabase admin client not available'
+      }), { 
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -172,8 +180,19 @@ export async function PUT(request: Request, { id }: { id: string }) {
 
 export async function DELETE(request: Request, { id }: { id: string }) {
   try {
+    console.log('DELETE request received for character:', id);
+    console.log('Environment check:', {
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      hasUrl: !!process.env.EXPO_PUBLIC_SUPABASE_URL,
+      serviceKeyLength: process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0
+    });
+
     if (!supabaseAdmin) {
-      return new Response(JSON.stringify({ error: 'Server configuration error' }), { 
+      console.error('Supabase admin client not initialized - missing SUPABASE_SERVICE_ROLE_KEY');
+      return new Response(JSON.stringify({ 
+        error: 'Server configuration error',
+        details: 'Supabase admin client not available - check environment variables'
+      }), { 
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -188,9 +207,11 @@ export async function DELETE(request: Request, { id }: { id: string }) {
       });
     }
 
+    console.log('Validating user token...');
     const { user, error: authError } = await validateUserFromToken(authHeader);
 
     if (authError || !user) {
+      console.error('Authentication failed:', authError);
       return new Response(JSON.stringify({ 
         error: 'Authentication failed',
         details: authError?.message || 'Invalid token'
@@ -200,6 +221,7 @@ export async function DELETE(request: Request, { id }: { id: string }) {
       });
     }
 
+    console.log('User validated, checking character existence...');
     // First, check if the character exists and belongs to the user
     const { data: existingCharacter, error: checkError } = await supabaseAdmin
       .from('characters')
@@ -209,6 +231,7 @@ export async function DELETE(request: Request, { id }: { id: string }) {
       .single();
 
     if (checkError) {
+      console.error('Error checking character:', checkError);
       if (checkError.code === 'PGRST116') {
         return new Response(JSON.stringify({ 
           error: 'Character not found or you do not have permission to delete it'
@@ -218,16 +241,18 @@ export async function DELETE(request: Request, { id }: { id: string }) {
         });
       }
       
-      console.error('Error checking character:', checkError);
       return new Response(JSON.stringify({ 
-        error: 'Database error',
-        message: checkError.message
+        error: 'Database error during character check',
+        message: checkError.message,
+        details: checkError.details || 'No additional details',
+        code: checkError.code || 'UNKNOWN'
       }), { 
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
+    console.log('Character found, proceeding with deletion...');
     // Now delete the character
     const { error: deleteError } = await supabaseAdmin
       .from('characters')
@@ -238,17 +263,18 @@ export async function DELETE(request: Request, { id }: { id: string }) {
     if (deleteError) {
       console.error('Error deleting character:', deleteError);
       return new Response(JSON.stringify({ 
-        error: 'Database error',
+        error: 'Database error during deletion',
         message: deleteError.message,
-        details: deleteError.details,
-        hint: deleteError.hint,
-        code: deleteError.code
+        details: deleteError.details || 'No additional details',
+        hint: deleteError.hint || 'No hint available',
+        code: deleteError.code || 'UNKNOWN'
       }), { 
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
+    console.log('Character deleted successfully');
     return new Response(JSON.stringify({ 
       message: 'Character deleted successfully',
       characterName: existingCharacter.name
@@ -258,10 +284,24 @@ export async function DELETE(request: Request, { id }: { id: string }) {
     });
 
   } catch (error) {
-    console.error('API Error:', error);
+    console.error('API Error in DELETE:', error);
+    
+    // Check if it's a network/fetch error
+    if (error instanceof Error && error.message.includes('fetch failed')) {
+      return new Response(JSON.stringify({ 
+        error: 'Network connection error',
+        message: 'Unable to connect to database. Please check your internet connection and try again.',
+        details: error.message
+      }), { 
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
     }), { 
       status: 500,
       headers: { 'Content-Type': 'application/json' }
