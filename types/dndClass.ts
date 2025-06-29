@@ -4,6 +4,7 @@ export interface DnDClass {
   description: string;
   hitDie: string;
   primaryAbility: string[];
+  negrito: string[];
   savingThrowProficiencies: string[];
   skillProficiencies: string[];
   armorProficiencies: string[];
