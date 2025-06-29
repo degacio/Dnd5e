@@ -6,7 +6,7 @@
     "hitDie": "d8",
     "primaryAbility": ["Inteligência"],
     "savingThrowProficiencies": ["Constituição", "Inteligência"],
-    "skillProficiencies": ["<b>Escolha duas entre:</b>\n Arcanismo", "História", "Investigação", "Medicina", "Natureza", "Percepção", "Prestidigitação"],
+    "skillProficiencies": ["Escolha duas entre:\n Arcanismo", "História", "Investigação", "Medicina", "Natureza", "Percepção", "Prestidigitação"],
     "armorProficiencies": ["Armaduras leves", "Armaduras médias", "Escudos"],
     "weaponProficiencies": ["Armas simples", "Armas de fogo"],
     "toolProficiencies": ["Ferramentas de ladrão", "Kit de ferramentas de artesão", "Ferramentas de alquimista"],
