@@ -4,10 +4,6 @@ import { CharacterUpdate } from '@/types/database';
 // Helper para validar e obter o usuário a partir do token
 async function validateUserFromToken(authHeader: string) {
   try {
-    if (!supabaseAdmin) {
-      throw new Error('Supabase admin client not available - check SUPABASE_SERVICE_ROLE_KEY');
-    }
-
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
 
@@ -45,14 +41,6 @@ export async function GET(request: Request) {
   }
 
   try {
-    if (!supabaseAdmin) {
-      console.error('Supabase admin client not initialized');
-      return new Response(JSON.stringify({
-        error: 'Server configuration error',
-        details: 'Supabase admin client not available'
-      }), { status: 500 });
-    }
-
     const authHeader = request.headers.get('Authorization');
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -101,13 +89,6 @@ export async function PUT(request: Request) {
   }
 
   try {
-    if (!supabaseAdmin) {
-      return new Response(JSON.stringify({
-        error: 'Server configuration error',
-        details: 'Supabase admin client not available'
-      }), { status: 500 });
-    }
-
     const authHeader = request.headers.get('Authorization');
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -167,13 +148,6 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    if (!supabaseAdmin) {
-      return new Response(JSON.stringify({
-        error: 'Server configuration error',
-        details: 'Supabase admin client not available'
-      }), { status: 500 });
-    }
-
     const authHeader = request.headers.get('Authorization');
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -227,6 +201,7 @@ export async function DELETE(request: Request) {
       characterName: existingCharacter.name
     }), { status: 200 });
   } catch (error) {
+    console.error('DELETE API Error:', error);
     return new Response(JSON.stringify({
       error: 'Internal server error',
       message: error instanceof Error ? error.message : 'Unknown error',
