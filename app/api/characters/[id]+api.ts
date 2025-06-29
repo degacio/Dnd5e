@@ -29,7 +29,7 @@ async function validateUserFromToken(authHeader: string) {
   }
 }
 
-// Enhanced error response function with better diagnostics
+// Enhanced error response function with better diagnostics and user-friendly messages
 function createErrorResponse(error: any, operation: string) {
   console.error(`${operation} error:`, {
     message: error.message,
@@ -49,19 +49,25 @@ function createErrorResponse(error: any, operation: string) {
     error.message.includes('timeout') ||
     error.message.includes('TypeError: fetch failed') ||
     error.message.includes('Failed to fetch') ||
-    error.message.includes('NetworkError')
+    error.message.includes('NetworkError') ||
+    error.message.includes('Connection timeout') ||
+    error.message.includes('Network connection failed')
   )) {
     return new Response(JSON.stringify({ 
       error: 'Erro de conexão com o banco de dados',
-      message: 'Não foi possível conectar ao banco de dados. Verifique sua conexão com a internet e tente novamente.',
+      message: 'Não foi possível conectar ao banco de dados. Isso pode ser devido a problemas de rede ou configuração.',
       type: 'network_error',
       troubleshooting: [
         'Verifique sua conexão com a internet',
-        'Confirme se o projeto Supabase está ativo',
-        'Use a aba "Testes" para diagnósticos detalhados',
-        'Verifique as configurações de firewall/proxy'
+        'Confirme se o projeto Supabase está ativo (não pausado)',
+        'Verifique se a URL do Supabase está correta no arquivo .env',
+        'Desative VPN temporariamente se estiver usando',
+        'Verifique configurações de firewall/proxy',
+        'Tente acessar o painel do Supabase no navegador',
+        'Use a aba "Testes" para diagnósticos detalhados'
       ],
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      technical_details: error.message
     }), {
       status: 503,
       headers: { 'Content-Type': 'application/json' }
@@ -91,7 +97,8 @@ function createErrorResponse(error: any, operation: string) {
   if (error.message && (
     error.message.includes('Invalid API key') ||
     error.message.includes('Project not found') ||
-    error.message.includes('Invalid project')
+    error.message.includes('Invalid project') ||
+    error.message.includes('service role key')
   )) {
     return new Response(JSON.stringify({ 
       error: 'Erro de configuração',
@@ -100,7 +107,8 @@ function createErrorResponse(error: any, operation: string) {
       troubleshooting: [
         'Verifique EXPO_PUBLIC_SUPABASE_URL no arquivo .env',
         'Verifique SUPABASE_SERVICE_ROLE_KEY no arquivo .env',
-        'Confirme se as chaves correspondem ao seu projeto Supabase'
+        'Confirme se as chaves correspondem ao seu projeto Supabase',
+        'Regenere as chaves se necessário no painel do Supabase'
       ],
       timestamp: new Date().toISOString()
     }), {
@@ -122,16 +130,19 @@ function createErrorResponse(error: any, operation: string) {
   });
 }
 
-// Enhanced connection test function
+// Enhanced connection test function with detailed logging
 async function testDatabaseConnection() {
   try {
+    console.log('🔍 Testing database connection before operation...');
     const result = await testSupabaseAdminConnection();
     if (!result.success) {
-      throw new Error(`Database connection failed: ${result.error}`);
+      console.error('❌ Database connection test failed:', result.error);
+      throw new Error(`Database connection failed: ${result.error}. Troubleshooting: ${result.troubleshooting?.join(', ')}`);
     }
+    console.log('✅ Database connection test passed');
     return true;
   } catch (error) {
-    console.error('Database connection test failed:', error);
+    console.error('❌ Database connection test failed:', error);
     throw error;
   }
 }
@@ -313,7 +324,10 @@ export async function PUT(request: Request, { id }: { id: string }) {
 
 export async function DELETE(request: Request, { id }: { id: string }) {
   try {
+    console.log('🗑️  DELETE request received for character:', id);
+    
     if (!supabaseAdmin) {
+      console.error('❌ Supabase admin client not available');
       return new Response(JSON.stringify({ 
         error: 'Erro de configuração do servidor',
         message: 'Configuração do servidor indisponível. Tente novamente mais tarde.',
@@ -338,6 +352,7 @@ export async function DELETE(request: Request, { id }: { id: string }) {
     const authHeader = request.headers.get('Authorization');
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error('❌ Missing or invalid authorization header');
       return new Response(JSON.stringify({ 
         error: 'Erro de autorização',
         message: 'Token de autorização inválido ou ausente.',
@@ -349,9 +364,11 @@ export async function DELETE(request: Request, { id }: { id: string }) {
       });
     }
 
+    console.log('🔐 Validating user token...');
     const { user, error: authError } = await validateUserFromToken(authHeader);
 
     if (authError || !user) {
+      console.error('❌ User validation failed:', authError);
       return new Response(JSON.stringify({ 
         error: 'Erro de autenticação',
         message: 'Falha na autenticação. Faça login novamente.',
@@ -363,6 +380,8 @@ export async function DELETE(request: Request, { id }: { id: string }) {
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    console.log('✅ User validated:', user.id);
 
     // Verify character exists and belongs to user before deletion
     console.log(`🔍 Verifying character ${id} exists and belongs to user ${user.id}...`);
@@ -380,6 +399,7 @@ export async function DELETE(request: Request, { id }: { id: string }) {
       }
       
       if (!existingCharacter) {
+        console.error('❌ Character not found or access denied');
         return new Response(JSON.stringify({ 
           error: 'Personagem não encontrado',
           message: 'Personagem não encontrado ou você não tem permissão para excluí-lo.',
@@ -397,28 +417,33 @@ export async function DELETE(request: Request, { id }: { id: string }) {
       return createErrorResponse(verifyErr, 'Character verification');
     }
 
-    // Perform the deletion
+    // Perform the deletion with enhanced error handling
     console.log(`🗑️  Attempting to delete character ${id}...`);
-    const { error: deleteError } = await supabaseAdmin
-      .from('characters')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', user.id);
+    try {
+      const { error: deleteError } = await supabaseAdmin
+        .from('characters')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
 
-    if (deleteError) {
-      console.error('❌ Character deletion failed:', deleteError);
-      return createErrorResponse(deleteError, 'Database delete');
+      if (deleteError) {
+        console.error('❌ Character deletion failed:', deleteError);
+        return createErrorResponse(deleteError, 'Database delete');
+      }
+
+      console.log('✅ Character deleted successfully');
+      return new Response(JSON.stringify({ 
+        message: 'Personagem excluído com sucesso',
+        success: true,
+        timestamp: new Date().toISOString()
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (deleteErr) {
+      console.error('❌ Delete operation error:', deleteErr);
+      return createErrorResponse(deleteErr, 'Database delete operation');
     }
-
-    console.log('✅ Character deleted successfully');
-    return new Response(JSON.stringify({ 
-      message: 'Personagem excluído com sucesso',
-      success: true,
-      timestamp: new Date().toISOString()
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
   } catch (error) {
     console.error('❌ API Error:', error);
     return createErrorResponse(error, 'API request');
