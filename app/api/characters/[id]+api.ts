@@ -5,7 +5,8 @@ import { CharacterUpdate } from '@/types/database';
 async function validateUserFromToken(authHeader: string) {
   try {
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    // Use admin client to validate the token - use admin.getUserByAccessToken for server-side JWT validation
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserByAccessToken(token);
 
     if (userError) {
       console.error('User validation error:', userError);
