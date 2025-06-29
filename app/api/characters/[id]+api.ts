@@ -33,24 +33,54 @@ function createAuthenticatedClient(authHeader: string) {
   );
 }
 
+// Helper function to validate and get user from token
+async function validateUserFromToken(authHeader: string) {
+  try {
+    const supabase = createAuthenticatedClient(authHeader);
+    
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError) {
+      console.error('User validation error:', userError);
+      return { user: null, error: userError };
+    }
+    
+    if (!user || !user.id || !user.email) {
+      console.error('Invalid user data:', { hasUser: !!user, hasId: !!user?.id, hasEmail: !!user?.email });
+      return { user: null, error: { message: 'Invalid user data' } };
+    }
+    
+    return { user, error: null };
+  } catch (error) {
+    console.error('Token validation error:', error);
+    return { user: null, error };
+  }
+}
+
 export async function GET(request: Request, { id }: { id: string }) {
   try {
     const authHeader = request.headers.get('Authorization');
     
-    if (!authHeader) {
-      return new Response('Unauthorized', { status: 401 });
-    }
-
-    const supabase = createAuthenticatedClient(authHeader);
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Invalid authorization header' }), { 
         status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
+    const { user, error: authError } = await validateUserFromToken(authHeader);
+
+    if (authError || !user) {
+      return new Response(JSON.stringify({ 
+        error: 'Authentication failed',
+        details: authError?.message || 'Invalid token'
+      }), { 
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const supabase = createAuthenticatedClient(authHeader);
     const { data: character, error } = await supabase
       .from('characters')
       .select('*')
@@ -60,8 +90,11 @@ export async function GET(request: Request, { id }: { id: string }) {
 
     if (error) {
       console.error('Error fetching character:', error);
-      return new Response(JSON.stringify({ error: error.message }), { 
-        status: 404,
+      return new Response(JSON.stringify({ 
+        error: error.code === 'PGRST116' ? 'Character not found' : 'Database error',
+        details: error.message 
+      }), { 
+        status: error.code === 'PGRST116' ? 404 : 500,
         headers: { 'Content-Type': 'application/json' }
       });
     }
@@ -69,7 +102,10 @@ export async function GET(request: Request, { id }: { id: string }) {
     return Response.json(character);
   } catch (error) {
     console.error('API Error:', error);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), { 
+    return new Response(JSON.stringify({ 
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }), { 
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -80,18 +116,20 @@ export async function PUT(request: Request, { id }: { id: string }) {
   try {
     const authHeader = request.headers.get('Authorization');
     
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Invalid authorization header' }), { 
         status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    const supabase = createAuthenticatedClient(authHeader);
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { user, error: authError } = await validateUserFromToken(authHeader);
 
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
+      return new Response(JSON.stringify({ 
+        error: 'Authentication failed',
+        details: authError?.message || 'Invalid token'
+      }), { 
         status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -103,6 +141,7 @@ export async function PUT(request: Request, { id }: { id: string }) {
       updated_at: new Date().toISOString(),
     };
 
+    const supabase = createAuthenticatedClient(authHeader);
     const { data: characters, error } = await supabase
       .from('characters')
       .update(updateData)
@@ -113,7 +152,8 @@ export async function PUT(request: Request, { id }: { id: string }) {
     if (error) {
       console.error('Error updating character:', error);
       return new Response(JSON.stringify({ 
-        error: `Error updating character: ${error.message}`,
+        error: 'Database error',
+        message: error.message,
         details: error.details,
         hint: error.hint,
         code: error.code
@@ -149,22 +189,26 @@ export async function DELETE(request: Request, { id }: { id: string }) {
   try {
     const authHeader = request.headers.get('Authorization');
     
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Invalid authorization header' }), { 
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const { user, error: authError } = await validateUserFromToken(authHeader);
+
+    if (authError || !user) {
+      return new Response(JSON.stringify({ 
+        error: 'Authentication failed',
+        details: authError?.message || 'Invalid token'
+      }), { 
         status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
     const supabase = createAuthenticatedClient(authHeader);
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
 
     // First, check if the character exists and belongs to the user
     const { data: existingCharacter, error: checkError } = await supabase
@@ -176,7 +220,6 @@ export async function DELETE(request: Request, { id }: { id: string }) {
 
     if (checkError) {
       if (checkError.code === 'PGRST116') {
-        // Character not found
         return new Response(JSON.stringify({ 
           error: 'Character not found or you do not have permission to delete it'
         }), { 
@@ -187,7 +230,8 @@ export async function DELETE(request: Request, { id }: { id: string }) {
       
       console.error('Error checking character:', checkError);
       return new Response(JSON.stringify({ 
-        error: `Error checking character: ${checkError.message}`
+        error: 'Database error',
+        message: checkError.message
       }), { 
         status: 500,
         headers: { 'Content-Type': 'application/json' }
@@ -204,7 +248,8 @@ export async function DELETE(request: Request, { id }: { id: string }) {
     if (deleteError) {
       console.error('Error deleting character:', deleteError);
       return new Response(JSON.stringify({ 
-        error: `Error deleting character: ${deleteError.message}`,
+        error: 'Database error',
+        message: deleteError.message,
         details: deleteError.details,
         hint: deleteError.hint,
         code: deleteError.code
@@ -224,72 +269,6 @@ export async function DELETE(request: Request, { id }: { id: string }) {
 
   } catch (error) {
     console.error('API Error:', error);
-    
-    // Enhanced error handling for network issues
-    if (error instanceof Error) {
-      if (error.message.includes('fetch failed') || error.message.includes('network')) {
-        // Network error - try to verify if deletion actually happened
-        try {
-          const authHeader = request.headers.get('Authorization');
-          if (authHeader) {
-            const supabase = createAuthenticatedClient(authHeader);
-            const { data: { user } } = await supabase.auth.getUser();
-            
-            if (user) {
-              // Check if the character still exists
-              const { data: character, error: recheckError } = await supabase
-                .from('characters')
-                .select('id')
-                .eq('id', id)
-                .eq('user_id', user.id)
-                .maybeSingle();
-              
-              // If character is not found, deletion was successful
-              if (recheckError && recheckError.code === 'PGRST116') {
-                return new Response(JSON.stringify({ 
-                  message: 'Character deleted successfully' 
-                }), { 
-                  status: 200,
-                  headers: { 'Content-Type': 'application/json' }
-                });
-              }
-              
-              // If character still exists, deletion failed
-              if (character) {
-                return new Response(JSON.stringify({ 
-                  error: 'Failed to delete character',
-                  message: 'Character deletion was not completed due to network issues'
-                }), { 
-                  status: 500,
-                  headers: { 'Content-Type': 'application/json' }
-                });
-              }
-              
-              // If no error and no character, deletion was successful
-              if (!recheckError && !character) {
-                return new Response(JSON.stringify({ 
-                  message: 'Character deleted successfully' 
-                }), { 
-                  status: 200,
-                  headers: { 'Content-Type': 'application/json' }
-                });
-              }
-            }
-          }
-        } catch (recheckError) {
-          console.error('Error during deletion verification:', recheckError);
-          // If verification fails, assume deletion was successful to avoid confusion
-          return new Response(JSON.stringify({ 
-            message: 'Character deleted successfully',
-            note: 'Deletion completed but verification failed due to network issues'
-          }), { 
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-          });
-        }
-      }
-    }
-    
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
       message: error instanceof Error ? error.message : 'Unknown error'

@@ -10,7 +10,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { TestTube, Wifi, Database, User, Shield, CircleCheck as CheckCircle, Circle as XCircle, RefreshCw, Play, Eye, Settings } from 'lucide-react-native';
+import { TestTube, Wifi, Database, User, Shield, CircleCheck as CheckCircle, Circle as XCircle, RefreshCw, Play, Eye, Settings, Lock } from 'lucide-react-native';
 import { supabase, testSupabaseConnection } from '@/lib/supabase';
 
 interface TestResult {
@@ -177,7 +177,57 @@ export default function TestTab() {
     }
   };
 
-  // Test 5: Characters API Test
+  // Test 5: Auth Token Validation
+  const testAuthToken = async () => {
+    addTestResult({ name: 'Auth Token Validation', status: 'pending', message: 'Testando validação de token...' });
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        addTestResult({
+          name: 'Auth Token Validation',
+          status: 'error',
+          message: 'Usuário não autenticado',
+          details: 'Faça login primeiro'
+        });
+        return;
+      }
+
+      const response = await fetch('/api/test-auth', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.authenticated) {
+        addTestResult({
+          name: 'Auth Token Validation',
+          status: 'success',
+          message: 'Token de autenticação válido',
+          details: data
+        });
+      } else {
+        addTestResult({
+          name: 'Auth Token Validation',
+          status: 'error',
+          message: 'Token de autenticação inválido',
+          details: data
+        });
+      }
+    } catch (error) {
+      addTestResult({
+        name: 'Auth Token Validation',
+        status: 'error',
+        message: 'Falha na validação do token',
+        details: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+    }
+  };
+
+  // Test 6: Characters API Test
   const testCharactersApi = async () => {
     addTestResult({ name: 'Characters API', status: 'pending', message: 'Testando API de personagens...' });
     
@@ -227,7 +277,7 @@ export default function TestTab() {
     }
   };
 
-  // Test 6: Share Token Test
+  // Test 7: Share Token Test
   const testShareToken = async () => {
     if (!shareToken.trim()) {
       Alert.alert('Erro', 'Por favor, insira um token de compartilhamento para testar');
@@ -281,6 +331,9 @@ export default function TestTab() {
     await new Promise(resolve => setTimeout(resolve, 500));
     
     await testSupabaseDirect();
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    await testAuthToken();
     await new Promise(resolve => setTimeout(resolve, 500));
     
     await testCharactersApi();
@@ -345,6 +398,11 @@ export default function TestTab() {
             <TouchableOpacity style={styles.testButton} onPress={testSupabaseDirect}>
               <Shield size={20} color="#FFFFFF" />
               <Text style={styles.testButtonText}>Supabase</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.testButton} onPress={testAuthToken}>
+              <Lock size={20} color="#FFFFFF" />
+              <Text style={styles.testButtonText}>Auth Token</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.testButton} onPress={testCharactersApi}>

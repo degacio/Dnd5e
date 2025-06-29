@@ -32,19 +32,51 @@ function createAuthenticatedClient(authHeader: string) {
   );
 }
 
+// Helper function to validate and get user from token
+async function validateUserFromToken(authHeader: string) {
+  try {
+    const supabase = createAuthenticatedClient(authHeader);
+    
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError) {
+      console.error('User validation error:', userError);
+      return { user: null, error: userError };
+    }
+    
+    if (!user || !user.id || !user.email) {
+      console.error('Invalid user data:', { hasUser: !!user, hasId: !!user?.id, hasEmail: !!user?.email });
+      return { user: null, error: { message: 'Invalid user data' } };
+    }
+    
+    return { user, error: null };
+  } catch (error) {
+    console.error('Token validation error:', error);
+    return { user: null, error };
+  }
+}
+
 export async function POST(request: Request, { id }: { id: string }) {
   try {
     const authHeader = request.headers.get('Authorization');
     
-    if (!authHeader) {
-      return new Response('Unauthorized', { status: 401 });
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Invalid authorization header' }), { 
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    const supabase = createAuthenticatedClient(authHeader);
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { user, error: authError } = await validateUserFromToken(authHeader);
 
     if (authError || !user) {
-      return new Response('Unauthorized', { status: 401 });
+      return new Response(JSON.stringify({ 
+        error: 'Authentication failed',
+        details: authError?.message || 'Invalid token'
+      }), { 
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     // Generate a new UUID for the share token
@@ -67,8 +99,9 @@ export async function POST(request: Request, { id }: { id: string }) {
     if (error) {
       console.error('Error generating share token:', error);
       return new Response(JSON.stringify({ 
-        error: 'Error generating share token',
-        details: error.message 
+        error: 'Database error',
+        message: error.message,
+        details: error.details 
       }), { 
         status: 500,
         headers: { 'Content-Type': 'application/json' }
@@ -104,15 +137,23 @@ export async function DELETE(request: Request, { id }: { id: string }) {
   try {
     const authHeader = request.headers.get('Authorization');
     
-    if (!authHeader) {
-      return new Response('Unauthorized', { status: 401 });
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Invalid authorization header' }), { 
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    const supabase = createAuthenticatedClient(authHeader);
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { user, error: authError } = await validateUserFromToken(authHeader);
 
     if (authError || !user) {
-      return new Response('Unauthorized', { status: 401 });
+      return new Response(JSON.stringify({ 
+        error: 'Authentication failed',
+        details: authError?.message || 'Invalid token'
+      }), { 
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     // Use admin client for the update operation
@@ -129,8 +170,9 @@ export async function DELETE(request: Request, { id }: { id: string }) {
     if (error) {
       console.error('Error revoking share token:', error);
       return new Response(JSON.stringify({ 
-        error: 'Error revoking share token',
-        details: error.message 
+        error: 'Database error',
+        message: error.message,
+        details: error.details 
       }), { 
         status: 500,
         headers: { 'Content-Type': 'application/json' }
