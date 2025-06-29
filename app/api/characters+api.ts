@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 // Helper function to validate and get user from token
 async function validateUserFromToken(authHeader: string) {

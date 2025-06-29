@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { CharacterUpdate } from '@/types/database';
 
 // Helper para validar e obter o usuário a partir do token
