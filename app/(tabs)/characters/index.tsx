@@ -34,7 +34,10 @@ import {
   X,
   Clock,
   Trash2,
-  TriangleAlert as AlertTriangle
+  TriangleAlert as AlertTriangle,
+  ArrowLeft,
+  Heart,
+  Shield
 } from 'lucide-react-native';
 import classesData from '@/data/classes.json';
 
@@ -62,7 +65,7 @@ export default function CharactersTab() {
   const [showAddSpellsModal, setShowAddSpellsModal] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [deletingCharacter, setDeletingCharacter] = useState(false);
-  const [activeTab, setActiveTab] = useState<'list' | 'grimoire'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'character-detail'>('list');
 
   useEffect(() => {
     loadData();
@@ -174,6 +177,17 @@ export default function CharactersTab() {
       spellSlots,
       characterClass
     };
+  };
+
+  const handleCharacterPress = (character: Character) => {
+    const characterSpells = prepareCharacterSpells(character);
+    setSelectedCharacterSpells(characterSpells);
+    setViewMode('character-detail');
+  };
+
+  const handleBackToList = () => {
+    setSelectedCharacterSpells(null);
+    setViewMode('list');
   };
 
   const updateSpellSlot = async (level: number, type: 'current' | 'max', delta: number) => {
@@ -339,9 +353,10 @@ export default function CharactersTab() {
         // Remove character from local state
         setCharacters(prev => prev.filter(char => char.id !== selectedCharacterSpells.character.id));
         
-        // Close modals
+        // Close modals and go back to list
         setShowDeleteConfirmation(false);
         setSelectedCharacterSpells(null);
+        setViewMode('list');
         
         const successMessage = `Personagem ${selectedCharacterSpells.character.name} foi excluído com sucesso.`;
         
@@ -487,14 +502,6 @@ export default function CharactersTab() {
     }
   };
 
-  // Filter spellcasting characters for grimoire
-  const spellcastingCharacters = useMemo(() => {
-    return characters.filter((char) => {
-      const characterClass = classesData.find(cls => cls.name === char.class_name);
-      return characterClass?.spellcasting;
-    });
-  }, [characters]);
-
   const getSpellLevelName = (level: number): string => {
     if (level === 0) return 'Truques';
     return `${level}º Círculo`;
@@ -525,6 +532,284 @@ export default function CharactersTab() {
     );
   }
 
+  // Character Detail View
+  if (viewMode === 'character-detail' && selectedCharacterSpells) {
+    const character = selectedCharacterSpells.character;
+    const hpPercentage = (character.hp_current / character.hp_max) * 100;
+    
+    const getHpColor = (percentage: number) => {
+      if (percentage > 75) return '#27AE60';
+      if (percentage > 50) return '#F39C12';
+      if (percentage > 25) return '#E67E22';
+      return '#E74C3C';
+    };
+
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.detailHeader}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={handleBackToList}
+          >
+            <ArrowLeft size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          
+          <View style={styles.detailHeaderContent}>
+            <Text style={styles.detailTitle}>{character.name}</Text>
+            <Text style={styles.detailSubtitle}>
+              {character.class_name} • Nível {character.level}
+            </Text>
+          </View>
+          
+          <View style={styles.detailHeaderActions}>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={confirmDeleteCharacter}
+              activeOpacity={0.8}
+            >
+              <Trash2 size={20} color="#E74C3C" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <ScrollView style={styles.detailContent} showsVerticalScrollIndicator={false}>
+          {/* Character Stats */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Shield size={20} color="#D4AF37" />
+              <Text style={styles.sectionTitle}>Status do Personagem</Text>
+            </View>
+
+            <View style={styles.statsGrid}>
+              <View style={styles.statCard}>
+                <Heart size={24} color={getHpColor(hpPercentage)} />
+                <Text style={styles.statLabel}>Pontos de Vida</Text>
+                <Text style={[styles.statValue, { color: getHpColor(hpPercentage) }]}>
+                  {character.hp_current} / {character.hp_max}
+                </Text>
+                <View style={styles.hpBar}>
+                  <View style={styles.hpBarBackground}>
+                    <View 
+                      style={[
+                        styles.hpBarFill, 
+                        { 
+                          width: `${hpPercentage}%`,
+                          backgroundColor: getHpColor(hpPercentage)
+                        }
+                      ]} 
+                    />
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Spell Slots Section */}
+          {selectedCharacterSpells.spellSlots.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Zap size={20} color="#E74C3C" />
+                <Text style={styles.sectionTitle}>Espaços de Magia</Text>
+              </View>
+
+              <View style={styles.spellSlotsGrid}>
+                {selectedCharacterSpells.spellSlots.map((slotInfo) => (
+                  <View key={slotInfo.level} style={styles.spellSlotCard}>
+                    <Text style={styles.spellSlotLevel}>
+                      {getSpellLevelName(slotInfo.level)}
+                    </Text>
+                    
+                    <View style={styles.spellSlotControls}>
+                      <View style={styles.spellSlotRow}>
+                        <Text style={styles.spellSlotLabel}>Atual:</Text>
+                        <View style={styles.slotAdjustControls}>
+                          <TouchableOpacity
+                            style={styles.slotButton}
+                            onPress={() => updateSpellSlot(slotInfo.level, 'current', -1)}
+                          >
+                            <Minus size={12} color="#666" />
+                          </TouchableOpacity>
+                          <Text style={styles.slotValue}>{slotInfo.current}</Text>
+                          <TouchableOpacity
+                            style={styles.slotButton}
+                            onPress={() => updateSpellSlot(slotInfo.level, 'current', 1)}
+                          >
+                            <Plus size={12} color="#666" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.spellSlotRow}>
+                        <Text style={styles.spellSlotLabel}>Máximo:</Text>
+                        <View style={styles.slotAdjustControls}>
+                          <TouchableOpacity
+                            style={styles.slotButton}
+                            onPress={() => updateSpellSlot(slotInfo.level, 'max', -1)}
+                          >
+                            <Minus size={12} color="#666" />
+                          </TouchableOpacity>
+                          <Text style={styles.slotValue}>{slotInfo.max}</Text>
+                          <TouchableOpacity
+                            style={styles.slotButton}
+                            onPress={() => updateSpellSlot(slotInfo.level, 'max', 1)}
+                          >
+                            <Plus size={12} color="#666" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Add Spells Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <BookOpen size={20} color="#8E44AD" />
+              <Text style={styles.sectionTitle}>Gerenciar Magias</Text>
+            </View>
+            
+            <TouchableOpacity
+              style={styles.addSpellsModalButton}
+              onPress={() => setShowAddSpellsModal(true)}
+              activeOpacity={0.8}
+            >
+              <Plus size={20} color="#FFFFFF" />
+              <Text style={styles.addSpellsModalButtonText}>Adicionar Novas Magias</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Spells by Level */}
+          {Object.keys(selectedCharacterSpells.spellsByLevel).length > 0 ? (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Sparkles size={20} color="#8E44AD" />
+                <Text style={styles.sectionTitle}>
+                  Grimório - Magias Conhecidas ({selectedCharacterSpells.spells.length})
+                </Text>
+              </View>
+
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(level => {
+                const spellsAtLevel = selectedCharacterSpells.spellsByLevel[level] || [];
+                if (spellsAtLevel.length === 0) return null;
+
+                const levelColor = getSpellLevelColor(level);
+
+                return (
+                  <View key={level} style={styles.spellLevelSection}>
+                    <View style={[styles.spellLevelHeader, { backgroundColor: levelColor }]}>
+                      <Text style={styles.spellLevelTitle}>
+                        {getSpellLevelName(level)}
+                      </Text>
+                      <View style={styles.spellCountBadge}>
+                        <Text style={styles.spellCountText}>{spellsAtLevel.length}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.spellsList}>
+                      {spellsAtLevel.map((spell, index) => (
+                        <View key={spell.id} style={styles.spellItem}>
+                          <View style={styles.spellInfo}>
+                            <Text style={styles.spellName}>{spell.name}</Text>
+                            <Text style={styles.spellSchool}>{spell.school}</Text>
+                          </View>
+                          <View style={styles.spellMeta}>
+                            <Text style={styles.spellCastingTime}>{spell.castingTime}</Text>
+                            <Text style={styles.spellRange}>{spell.range}</Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          ) : (
+            <View style={styles.noSpellsContainer}>
+              <Sparkles size={48} color="#D4AF37" />
+              <Text style={styles.noSpellsTitle}>Nenhuma Magia</Text>
+              <Text style={styles.noSpellsText}>
+                Este personagem ainda não possui magias em seu grimório.
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Add Spells Modal */}
+        <Modal
+          visible={showAddSpellsModal}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowAddSpellsModal(false)}
+        >
+          {selectedCharacterSpells && (
+            <SpellSelectionModal
+              visible={showAddSpellsModal}
+              onClose={() => setShowAddSpellsModal(false)}
+              characterClass={selectedCharacterSpells.characterClass!}
+              characterName={selectedCharacterSpells.character.name}
+              onAddSpells={(spells) => {
+                handleAddSpellsToGrimoire(spells);
+                setShowAddSpellsModal(false);
+              }}
+            />
+          )}
+        </Modal>
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          visible={showDeleteConfirmation}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowDeleteConfirmation(false)}
+        >
+          <View style={styles.deleteModalOverlay}>
+            <View style={styles.deleteModalContainer}>
+              <View style={styles.deleteModalHeader}>
+                <AlertTriangle size={24} color="#E74C3C" />
+                <Text style={styles.deleteModalTitle}>Confirmar Exclusão</Text>
+              </View>
+              
+              <Text style={styles.deleteModalMessage}>
+                Tem certeza que deseja excluir o personagem "{selectedCharacterSpells?.character.name}"?
+                {'\n\n'}Esta ação não pode ser desfeita e todos os dados do personagem serão perdidos permanentemente.
+              </Text>
+              
+              <View style={styles.deleteModalButtons}>
+                <TouchableOpacity 
+                  style={styles.deleteModalCancelButton} 
+                  onPress={() => setShowDeleteConfirmation(false)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.deleteModalCancelText}>Cancelar</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.deleteModalConfirmButton, deletingCharacter && styles.deleteModalButtonDisabled]} 
+                  onPress={handleDeleteCharacter}
+                  activeOpacity={0.8}
+                  disabled={deletingCharacter}
+                >
+                  {deletingCharacter ? (
+                    <RefreshCw size={16} color="#FFFFFF" />
+                  ) : (
+                    <Trash2 size={16} color="#FFFFFF" />
+                  )}
+                  <Text style={styles.deleteModalConfirmText}>
+                    {deletingCharacter ? 'Excluindo...' : 'Excluir'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </SafeAreaView>
+    );
+  }
+
+  // Characters List View
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -536,148 +821,45 @@ export default function CharactersTab() {
           Gerencie seus personagens e grimórios
         </Text>
         
-        <View style={styles.headerActions}>
-          <View style={styles.tabSelector}>
-            <TouchableOpacity
-              style={[styles.tabButton, activeTab === 'list' && styles.tabButtonActive]}
-              onPress={() => setActiveTab('list')}
-            >
-              <Users size={16} color={activeTab === 'list' ? '#FFFFFF' : '#D4AF37'} />
-              <Text style={[styles.tabButtonText, activeTab === 'list' && styles.tabButtonTextActive]}>
-                Lista
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.tabButton, activeTab === 'grimoire' && styles.tabButtonActive]}
-              onPress={() => setActiveTab('grimoire')}
-            >
-              <Scroll size={16} color={activeTab === 'grimoire' ? '#FFFFFF' : '#D4AF37'} />
-              <Text style={[styles.tabButtonText, activeTab === 'grimoire' && styles.tabButtonTextActive]}>
-                Grimório
-              </Text>
-            </TouchableOpacity>
-          </View>
-          
-          <TouchableOpacity 
-            style={styles.refreshButton}
-            onPress={handleRefresh}
-            disabled={refreshing}
-          >
-            <RefreshCw size={20} color="#D4AF37" />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity 
+          style={styles.refreshButton}
+          onPress={handleRefresh}
+          disabled={refreshing}
+        >
+          <RefreshCw size={20} color="#D4AF37" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {activeTab === 'list' ? (
-          // Characters List View
-          <>
-            <View style={styles.createButtonContainer}>
-              <TouchableOpacity 
-                style={styles.createButton}
-                onPress={handleCreateCharacter}
-              >
-                <Plus size={20} color="#FFFFFF" />
-                <Text style={styles.createButtonText}>Novo Personagem</Text>
-              </TouchableOpacity>
-            </View>
+        <View style={styles.createButtonContainer}>
+          <TouchableOpacity 
+            style={styles.createButton}
+            onPress={handleCreateCharacter}
+          >
+            <Plus size={20} color="#FFFFFF" />
+            <Text style={styles.createButtonText}>Novo Personagem</Text>
+          </TouchableOpacity>
+        </View>
 
-            {characters.length > 0 ? (
-              <View style={styles.charactersContainer}>
-                {characters.map((character) => (
-                  <CharacterCard
-                    key={character.id}
-                    character={character}
-                    onPress={() => setSelectedCharacter(character)}
-                    onShare={() => handleGenerateToken(character.id)}
-                  />
-                ))}
-              </View>
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Users size={64} color="#D4AF37" />
-                <Text style={styles.emptyTitle}>Nenhum Personagem</Text>
-                <Text style={styles.emptyText}>
-                  Você ainda não criou nenhum personagem. Comece criando seu primeiro aventureiro!
-                </Text>
-              </View>
-            )}
-          </>
+        {characters.length > 0 ? (
+          <View style={styles.charactersContainer}>
+            {characters.map((character) => (
+              <CharacterCard
+                key={character.id}
+                character={character}
+                onPress={() => handleCharacterPress(character)}
+                onShare={() => handleGenerateToken(character.id)}
+              />
+            ))}
+          </View>
         ) : (
-          // Grimoire View
-          <>
-            {spellcastingCharacters.length > 0 ? (
-              <View style={styles.grimoireContainer}>
-                {spellcastingCharacters.map((character) => {
-                  const characterClass = classesData.find(cls => cls.name === character.class_name);
-                  const spellCount = character.spells_known ? character.spells_known.length : 0;
-                  const totalSlots = Object.values(character.spell_slots || {}).reduce((total: number, slots: any) => {
-                    return total + (Array.isArray(slots) ? slots[1] : 0);
-                  }, 0);
-                  
-                  return (
-                    <View key={character.id} style={styles.grimoireCardWrapper}>
-                      <TouchableOpacity
-                        style={styles.grimoireCard}
-                        onPress={() => setSelectedCharacterSpells(prepareCharacterSpells(character))}
-                        activeOpacity={0.8}
-                      >
-                        <View style={styles.grimoireHeader}>
-                          <View style={styles.grimoireInfo}>
-                            <Scroll size={24} color="#8E44AD" />
-                            <View style={styles.grimoireDetails}>
-                              <Text style={styles.grimoireCharacterName}>{character.name}</Text>
-                              <Text style={styles.grimoireClass}>
-                                {character.class_name} • Nível {character.level}
-                              </Text>
-                            </View>
-                          </View>
-                        </View>
-
-                        <View style={styles.grimoireStats}>
-                          <View style={styles.grimoireStatItem}>
-                            <Sparkles size={16} color="#8E44AD" />
-                            <Text style={styles.grimoireStatLabel}>Magias</Text>
-                            <Text style={styles.grimoireStatValue}>{spellCount}</Text>
-                          </View>
-                          
-                          {totalSlots > 0 && (
-                            <View style={styles.grimoireStatItem}>
-                              <Zap size={16} color="#E74C3C" />
-                              <Text style={styles.grimoireStatLabel}>Espaços</Text>
-                              <Text style={styles.grimoireStatValue}>{totalSlots}</Text>
-                            </View>
-                          )}
-                        </View>
-                      </TouchableOpacity>
-
-                      {/* Add Spells Button */}
-                      <TouchableOpacity
-                        style={styles.addSpellsButton}
-                        onPress={() => {
-                          setSelectedCharacterSpells(prepareCharacterSpells(character));
-                          setShowAddSpellsModal(true);
-                        }}
-                        activeOpacity={0.8}
-                      >
-                        <BookOpen size={16} color="#8E44AD" />
-                        <Text style={styles.addSpellsButtonText}>Adicionar Magias</Text>
-                      </TouchableOpacity>
-                    </View>
-                  );
-                })}
-              </View>
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Scroll size={64} color="#D4AF37" />
-                <Text style={styles.emptyTitle}>Nenhum Conjurador</Text>
-                <Text style={styles.emptyText}>
-                  Você não possui personagens conjuradores. Apenas classes que podem lançar magias aparecem no grimório.
-                </Text>
-              </View>
-            )}
-          </>
+          <View style={styles.emptyContainer}>
+            <Users size={64} color="#D4AF37" />
+            <Text style={styles.emptyTitle}>Nenhum Personagem</Text>
+            <Text style={styles.emptyText}>
+              Você ainda não criou nenhum personagem. Comece criando seu primeiro aventureiro!
+            </Text>
+          </View>
         )}
       </ScrollView>
 
@@ -689,245 +871,6 @@ export default function CharactersTab() {
         onGenerateToken={handleGenerateToken}
         onRevokeToken={handleRevokeToken}
       />
-
-      {/* Grimoire Details Modal */}
-      <Modal
-        visible={!!selectedCharacterSpells && !showAddSpellsModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setSelectedCharacterSpells(null)}
-      >
-        {selectedCharacterSpells && (
-          <SafeAreaView style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalTitleSection}>
-                <Text style={styles.modalTitle}>{selectedCharacterSpells.character.name}</Text>
-                <Text style={styles.modalSubtitle}>
-                  {selectedCharacterSpells.character.class_name} • Nível {selectedCharacterSpells.character.level}
-                </Text>
-              </View>
-              <View style={styles.modalHeaderActions}>
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={confirmDeleteCharacter}
-                  activeOpacity={0.8}
-                >
-                  <Trash2 size={20} color="#E74C3C" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={() => setSelectedCharacterSpells(null)}
-                >
-                  <X size={24} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
-              {/* Spell Slots Section */}
-              {selectedCharacterSpells.spellSlots.length > 0 && (
-                <View style={styles.section}>
-                  <View style={styles.sectionHeader}>
-                    <Zap size={20} color="#E74C3C" />
-                    <Text style={styles.sectionTitle}>Espaços de Magia</Text>
-                  </View>
-
-                  <View style={styles.spellSlotsGrid}>
-                    {selectedCharacterSpells.spellSlots.map((slotInfo) => (
-                      <View key={slotInfo.level} style={styles.spellSlotCard}>
-                        <Text style={styles.spellSlotLevel}>
-                          {getSpellLevelName(slotInfo.level)}
-                        </Text>
-                        
-                        <View style={styles.spellSlotControls}>
-                          <View style={styles.spellSlotRow}>
-                            <Text style={styles.spellSlotLabel}>Atual:</Text>
-                            <View style={styles.slotAdjustControls}>
-                              <TouchableOpacity
-                                style={styles.slotButton}
-                                onPress={() => updateSpellSlot(slotInfo.level, 'current', -1)}
-                              >
-                                <Minus size={12} color="#666" />
-                              </TouchableOpacity>
-                              <Text style={styles.slotValue}>{slotInfo.current}</Text>
-                              <TouchableOpacity
-                                style={styles.slotButton}
-                                onPress={() => updateSpellSlot(slotInfo.level, 'current', 1)}
-                              >
-                                <Plus size={12} color="#666" />
-                              </TouchableOpacity>
-                            </View>
-                          </View>
-                          
-                          <View style={styles.spellSlotRow}>
-                            <Text style={styles.spellSlotLabel}>Máximo:</Text>
-                            <View style={styles.slotAdjustControls}>
-                              <TouchableOpacity
-                                style={styles.slotButton}
-                                onPress={() => updateSpellSlot(slotInfo.level, 'max', -1)}
-                              >
-                                <Minus size={12} color="#666" />
-                              </TouchableOpacity>
-                              <Text style={styles.slotValue}>{slotInfo.max}</Text>
-                              <TouchableOpacity
-                                style={styles.slotButton}
-                                onPress={() => updateSpellSlot(slotInfo.level, 'max', 1)}
-                              >
-                                <Plus size={12} color="#666" />
-                              </TouchableOpacity>
-                            </View>
-                          </View>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {/* Add Spells Section */}
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <BookOpen size={20} color="#8E44AD" />
-                  <Text style={styles.sectionTitle}>Gerenciar Magias</Text>
-                </View>
-                
-                <TouchableOpacity
-                  style={styles.addSpellsModalButton}
-                  onPress={() => setShowAddSpellsModal(true)}
-                  activeOpacity={0.8}
-                >
-                  <Plus size={20} color="#FFFFFF" />
-                  <Text style={styles.addSpellsModalButtonText}>Adicionar Novas Magias</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Spells by Level */}
-              {Object.keys(selectedCharacterSpells.spellsByLevel).length > 0 ? (
-                <View style={styles.section}>
-                  <View style={styles.sectionHeader}>
-                    <Sparkles size={20} color="#8E44AD" />
-                    <Text style={styles.sectionTitle}>
-                      Magias Conhecidas ({selectedCharacterSpells.spells.length})
-                    </Text>
-                  </View>
-
-                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(level => {
-                    const spellsAtLevel = selectedCharacterSpells.spellsByLevel[level] || [];
-                    if (spellsAtLevel.length === 0) return null;
-
-                    const levelColor = getSpellLevelColor(level);
-
-                    return (
-                      <View key={level} style={styles.spellLevelSection}>
-                        <View style={[styles.spellLevelHeader, { backgroundColor: levelColor }]}>
-                          <Text style={styles.spellLevelTitle}>
-                            {getSpellLevelName(level)}
-                          </Text>
-                          <View style={styles.spellCountBadge}>
-                            <Text style={styles.spellCountText}>{spellsAtLevel.length}</Text>
-                          </View>
-                        </View>
-
-                        <View style={styles.spellsList}>
-                          {spellsAtLevel.map((spell, index) => (
-                            <View key={spell.id} style={styles.spellItem}>
-                              <View style={styles.spellInfo}>
-                                <Text style={styles.spellName}>{spell.name}</Text>
-                                <Text style={styles.spellSchool}>{spell.school}</Text>
-                              </View>
-                              <View style={styles.spellMeta}>
-                                <Text style={styles.spellCastingTime}>{spell.castingTime}</Text>
-                                <Text style={styles.spellRange}>{spell.range}</Text>
-                              </View>
-                            </View>
-                          ))}
-                        </View>
-                      </View>
-                    );
-                  })}
-                </View>
-              ) : (
-                <View style={styles.noSpellsContainer}>
-                  <Sparkles size={48} color="#D4AF37" />
-                  <Text style={styles.noSpellsTitle}>Nenhuma Magia</Text>
-                  <Text style={styles.noSpellsText}>
-                    Este personagem ainda não possui magias em seu grimório.
-                  </Text>
-                </View>
-              )}
-            </ScrollView>
-          </SafeAreaView>
-        )}
-      </Modal>
-
-      {/* Add Spells Modal */}
-      <Modal
-        visible={showAddSpellsModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowAddSpellsModal(false)}
-      >
-        {selectedCharacterSpells && (
-          <SpellSelectionModal
-            visible={showAddSpellsModal}
-            onClose={() => setShowAddSpellsModal(false)}
-            characterClass={selectedCharacterSpells.characterClass!}
-            characterName={selectedCharacterSpells.character.name}
-            onAddSpells={(spells) => {
-              handleAddSpellsToGrimoire(spells);
-              setShowAddSpellsModal(false);
-            }}
-          />
-        )}
-      </Modal>
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        visible={showDeleteConfirmation}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowDeleteConfirmation(false)}
-      >
-        <View style={styles.deleteModalOverlay}>
-          <View style={styles.deleteModalContainer}>
-            <View style={styles.deleteModalHeader}>
-              <AlertTriangle size={24} color="#E74C3C" />
-              <Text style={styles.deleteModalTitle}>Confirmar Exclusão</Text>
-            </View>
-            
-            <Text style={styles.deleteModalMessage}>
-              Tem certeza que deseja excluir o personagem "{selectedCharacterSpells?.character.name}"?
-              {'\n\n'}Esta ação não pode ser desfeita e todos os dados do personagem serão perdidos permanentemente.
-            </Text>
-            
-            <View style={styles.deleteModalButtons}>
-              <TouchableOpacity 
-                style={styles.deleteModalCancelButton} 
-                onPress={() => setShowDeleteConfirmation(false)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.deleteModalCancelText}>Cancelar</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.deleteModalConfirmButton, deletingCharacter && styles.deleteModalButtonDisabled]} 
-                onPress={handleDeleteCharacter}
-                activeOpacity={0.8}
-                disabled={deletingCharacter}
-              >
-                {deletingCharacter ? (
-                  <RefreshCw size={16} color="#FFFFFF" />
-                ) : (
-                  <Trash2 size={16} color="#FFFFFF" />
-                )}
-                <Text style={styles.deleteModalConfirmText}>
-                  {deletingCharacter ? 'Excluindo...' : 'Excluir'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -954,11 +897,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderBottomWidth: 3,
     borderBottomColor: '#D4AF37',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   titleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    flex: 1,
   },
   title: {
     fontSize: 24,
@@ -970,40 +915,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#D4AF37',
     fontWeight: '500',
-    marginBottom: 16,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  tabSelector: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(212, 175, 55, 0.1)',
-    borderRadius: 8,
-    padding: 2,
-    flex: 1,
-  },
-  tabButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    gap: 6,
-    flex: 1,
-  },
-  tabButtonActive: {
-    backgroundColor: '#D4AF37',
-  },
-  tabButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#D4AF37',
-  },
-  tabButtonTextActive: {
-    color: '#FFFFFF',
+    position: 'absolute',
+    bottom: 8,
+    left: 52,
   },
   refreshButton: {
     padding: 8,
@@ -1040,89 +954,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 16,
   },
-  grimoireContainer: {
-    padding: 16,
-  },
-  grimoireCardWrapper: {
-    marginBottom: 12,
-  },
-  grimoireCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    borderLeftWidth: 4,
-    borderLeftColor: '#8E44AD',
-  },
-  grimoireHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  grimoireInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  grimoireDetails: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  grimoireCharacterName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 2,
-  },
-  grimoireClass: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  grimoireStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  grimoireStatItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'center',
-  },
-  grimoireStatLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 6,
-    marginRight: 8,
-  },
-  grimoireStatValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  addSpellsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F3E8FF',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: '#E0B3FF',
-    gap: 8,
-  },
-  addSpellsButtonText: {
-    color: '#8E44AD',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -1143,33 +974,34 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
-  // Modal styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-  },
-  modalHeader: {
+  // Character Detail View Styles
+  detailHeader: {
     backgroundColor: '#1A1A1A',
     paddingVertical: 20,
     paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    borderBottomWidth: 3,
+    borderBottomColor: '#D4AF37',
   },
-  modalTitleSection: {
+  backButton: {
+    padding: 4,
+    marginRight: 16,
+  },
+  detailHeaderContent: {
     flex: 1,
   },
-  modalTitle: {
+  detailTitle: {
     fontSize: 24,
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 4,
   },
-  modalSubtitle: {
+  detailSubtitle: {
     fontSize: 16,
     color: 'rgba(255, 255, 255, 0.9)',
   },
-  modalHeaderActions: {
+  detailHeaderActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -1179,10 +1011,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: 'rgba(231, 76, 60, 0.1)',
   },
-  closeButton: {
-    padding: 4,
-  },
-  modalContent: {
+  detailContent: {
     flex: 1,
     paddingHorizontal: 20,
   },
@@ -1207,6 +1036,40 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginLeft: 8,
+  },
+  statsGrid: {
+    gap: 16,
+  },
+  statCard: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 12,
+  },
+  hpBar: {
+    width: '100%',
+  },
+  hpBarBackground: {
+    height: 8,
+    backgroundColor: '#E8E8E8',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  hpBarFill: {
+    height: '100%',
+    borderRadius: 4,
   },
   addSpellsModalButton: {
     flexDirection: 'row',
