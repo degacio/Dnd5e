@@ -1,24 +1,16 @@
-import { createClient } from '@supabase/supabase-js';
-
-// Create server-side Supabase client with service role key for admin operations
-const supabaseAdmin = createClient(
-  process.env.EXPO_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
+import { supabaseAdmin } from '@/lib/supabase';
 
 // Helper function to validate and get user from token
 async function validateUserFromToken(authHeader: string) {
   try {
+    if (!supabaseAdmin) {
+      throw new Error('Supabase admin client not available');
+    }
+
     const token = authHeader.replace('Bearer ', '');
     
     // Use admin client to validate the token
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUser(token);
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(token);
     
     if (userError) {
       console.error('User validation error:', userError);
@@ -45,6 +37,13 @@ async function validateUserFromToken(authHeader: string) {
 
 export async function GET(request: Request) {
   try {
+    if (!supabaseAdmin) {
+      return new Response(JSON.stringify({ error: 'Server configuration error' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const authHeader = request.headers.get('Authorization');
     
     if (!authHeader) {
@@ -117,6 +116,13 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    if (!supabaseAdmin) {
+      return new Response(JSON.stringify({ error: 'Server configuration error' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const authHeader = request.headers.get('Authorization');
     
     if (!authHeader) {
