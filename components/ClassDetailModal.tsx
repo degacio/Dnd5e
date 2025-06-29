@@ -7,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
+  Dimensions,
 } from 'react-native';
 import { DnDClass, ClassColors } from '@/types/dndClass';
 import { Spell } from '@/types/spell';
@@ -26,6 +27,8 @@ import {
   ChevronRight,
   Scroll
 } from 'lucide-react-native';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 interface ClassDetailModalProps {
   dndClass: DnDClass | null;
@@ -106,6 +109,28 @@ export function ClassDetailModal({ dndClass, visible, onClose }: ClassDetailModa
 
     return data;
   };
+
+  // Calcular quantos botões cabem por linha
+  const getButtonsPerRow = () => {
+    const buttonWidth = 44; // largura do botão
+    const buttonMargin = 8; // margem entre botões
+    const containerPadding = 32; // padding do container (16 * 2)
+    const availableWidth = screenWidth - containerPadding;
+    return Math.floor(availableWidth / (buttonWidth + buttonMargin));
+  };
+
+  // Organizar níveis em grupos para melhor visualização
+  const levelGroups = useMemo(() => {
+    const buttonsPerRow = getButtonsPerRow();
+    const levels = Array.from({ length: 20 }, (_, i) => i + 1);
+    const groups = [];
+    
+    for (let i = 0; i < levels.length; i += buttonsPerRow) {
+      groups.push(levels.slice(i, i + buttonsPerRow));
+    }
+    
+    return groups;
+  }, []);
 
   if (!dndClass) return null;
 
@@ -261,28 +286,33 @@ export function ClassDetailModal({ dndClass, visible, onClose }: ClassDetailModa
                     </Text>
                   </View>
 
-                  {/* Seletor de Nível */}
+                  {/* Seletor de Nível Melhorado */}
                   <View style={styles.levelSelector}>
                     <Text style={styles.levelSelectorTitle}>Selecione o Nível:</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.levelButtons}>
-                      {Array.from({ length: 20 }, (_, i) => i + 1).map((level) => (
-                        <TouchableOpacity
-                          key={level}
-                          style={[
-                            styles.levelButton,
-                            selectedLevel === level && [styles.levelButtonSelected, { backgroundColor: classColor }]
-                          ]}
-                          onPress={() => setSelectedLevel(level)}
-                        >
-                          <Text style={[
-                            styles.levelButtonText,
-                            selectedLevel === level && styles.levelButtonTextSelected
-                          ]}>
-                            {level}
-                          </Text>
-                        </TouchableOpacity>
+                    
+                    <View style={styles.levelButtonsContainer}>
+                      {levelGroups.map((group, groupIndex) => (
+                        <View key={groupIndex} style={styles.levelButtonRow}>
+                          {group.map((level) => (
+                            <TouchableOpacity
+                              key={level}
+                              style={[
+                                styles.levelButton,
+                                selectedLevel === level && [styles.levelButtonSelected, { backgroundColor: classColor }]
+                              ]}
+                              onPress={() => setSelectedLevel(level)}
+                            >
+                              <Text style={[
+                                styles.levelButtonText,
+                                selectedLevel === level && styles.levelButtonTextSelected
+                              ]}>
+                                {level}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
                       ))}
-                    </ScrollView>
+                    </View>
                   </View>
 
                   {/* Dados de Progressão para o Nível Selecionado */}
@@ -726,19 +756,25 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 12,
   },
-  levelButtons: {
+  levelButtonsContainer: {
+    gap: 8,
+  },
+  levelButtonRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   levelButton: {
     backgroundColor: '#F8F9FA',
     borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginRight: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     borderWidth: 1,
     borderColor: '#E5E5E5',
-    minWidth: 40,
+    flex: 1,
     alignItems: 'center',
+    minWidth: 44,
+    maxWidth: 60,
   },
   levelButtonSelected: {
     borderColor: 'transparent',
