@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { BookOpen, Eye, Settings, Scroll, Users } from 'lucide-react-native';
+import { BookOpen, Eye, Settings, Users } from 'lucide-react-native';
 import { AuthGuard } from '@/components/AuthGuard';
 
 export default function TabLayout() {
@@ -24,15 +24,6 @@ export default function TabLayout() {
         }}
       >
         <Tabs.Screen
-          name="characters"
-          options={{
-            title: 'Personagens',
-            tabBarIcon: ({ size, color }) => (
-              <Users size={size} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
           name="index"
           options={{
             title: 'Lista de Magias',
@@ -42,11 +33,11 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="grimoire"
+          name="characters"
           options={{
-            title: 'Grimório',
+            title: 'Personagens',
             tabBarIcon: ({ size, color }) => (
-              <Scroll size={size} color={color} />
+              <Users size={size} color={color} />
             ),
           }}
         />
