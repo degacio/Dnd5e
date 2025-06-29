@@ -47,12 +47,16 @@ export async function POST(request: Request, { id }: { id: string }) {
       return new Response('Unauthorized', { status: 401 });
     }
 
+    // Generate a new UUID for the share token
+    const shareToken = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+
     // Use admin client for the update operation since we need to generate new tokens
     const { data: character, error } = await supabaseAdmin
       .from('characters')
       .update({
-        share_token: crypto.randomUUID(),
-        token_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
+        share_token: shareToken,
+        token_expires_at: expiresAt.toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -62,7 +66,22 @@ export async function POST(request: Request, { id }: { id: string }) {
 
     if (error) {
       console.error('Error generating share token:', error);
-      return new Response('Error generating share token', { status: 500 });
+      return new Response(JSON.stringify({ 
+        error: 'Error generating share token',
+        details: error.message 
+      }), { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (!character) {
+      return new Response(JSON.stringify({ 
+        error: 'Character not found or you do not have permission to share it'
+      }), { 
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     return Response.json({
@@ -71,7 +90,13 @@ export async function POST(request: Request, { id }: { id: string }) {
     });
   } catch (error) {
     console.error('API Error:', error);
-    return new Response('Internal server error', { status: 500 });
+    return new Response(JSON.stringify({ 
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }), { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
 
@@ -103,12 +128,29 @@ export async function DELETE(request: Request, { id }: { id: string }) {
 
     if (error) {
       console.error('Error revoking share token:', error);
-      return new Response('Error revoking share token', { status: 500 });
+      return new Response(JSON.stringify({ 
+        error: 'Error revoking share token',
+        details: error.message 
+      }), { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    return new Response('Share token revoked', { status: 200 });
+    return new Response(JSON.stringify({ 
+      message: 'Share token revoked successfully' 
+    }), { 
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error) {
     console.error('API Error:', error);
-    return new Response('Internal server error', { status: 500 });
+    return new Response(JSON.stringify({ 
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }), { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }

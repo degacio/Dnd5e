@@ -11,6 +11,7 @@ interface AuthGuardProps {
 export function AuthGuard({ children }: AuthGuardProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     console.log('🔐 AuthGuard mounted, checking auth status...');
@@ -30,6 +31,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
         const authenticated = !!session;
         setIsAuthenticated(authenticated);
         setLoading(false);
+        setError(null);
 
         if (event === 'SIGNED_OUT') {
           console.log('🚪 User signed out, redirecting to auth...');
@@ -58,6 +60,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
       
       if (error) {
         console.error('❌ Error checking auth status:', error);
+        setError(`Authentication error: ${error.message}`);
         setIsAuthenticated(false);
       } else {
         const authenticated = !!session;
@@ -68,9 +71,11 @@ export function AuthGuard({ children }: AuthGuardProps) {
           userEmail: session?.user?.email
         });
         setIsAuthenticated(authenticated);
+        setError(null);
       }
     } catch (error) {
       console.error('💥 Error checking auth status:', error);
+      setError(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setIsAuthenticated(false);
     } finally {
       setLoading(false);
@@ -85,6 +90,9 @@ export function AuthGuard({ children }: AuthGuardProps) {
         <Shield size={48} color="#D4AF37" />
         <ActivityIndicator size="large" color="#D4AF37" style={styles.spinner} />
         <Text style={styles.loadingText}>Verificando autenticação...</Text>
+        {error && (
+          <Text style={styles.errorText}>{error}</Text>
+        )}
       </View>
     );
   }
@@ -102,6 +110,9 @@ export function AuthGuard({ children }: AuthGuardProps) {
       <View style={styles.loadingContainer}>
         <Shield size={48} color="#D4AF37" />
         <Text style={styles.loadingText}>Redirecionando...</Text>
+        {error && (
+          <Text style={styles.errorText}>{error}</Text>
+        )}
       </View>
     );
   }
@@ -118,6 +129,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F8F9FA',
     gap: 16,
+    padding: 20,
   },
   spinner: {
     marginVertical: 8,
@@ -126,5 +138,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#E74C3C',
+    textAlign: 'center',
+    marginTop: 8,
+    paddingHorizontal: 20,
   },
 });
