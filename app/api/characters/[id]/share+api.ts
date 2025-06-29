@@ -12,32 +12,13 @@ const supabaseAdmin = createClient(
   }
 );
 
-// Helper function to create authenticated Supabase client
-function createAuthenticatedClient(authHeader: string) {
-  const token = authHeader.replace('Bearer ', '');
-  return createClient(
-    process.env.EXPO_PUBLIC_SUPABASE_URL!,
-    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      },
-      global: {
-        headers: {
-          Authorization: authHeader
-        }
-      }
-    }
-  );
-}
-
 // Helper function to validate and get user from token
 async function validateUserFromToken(authHeader: string) {
   try {
-    const supabase = createAuthenticatedClient(authHeader);
+    const token = authHeader.replace('Bearer ', '');
     
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Use admin client to validate the token
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUser(token);
     
     if (userError) {
       console.error('User validation error:', userError);

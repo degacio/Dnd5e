@@ -1,32 +1,24 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Helper function to create authenticated Supabase client
-function createAuthenticatedClient(authHeader: string) {
-  const token = authHeader.replace('Bearer ', '');
-  return createClient(
-    process.env.EXPO_PUBLIC_SUPABASE_URL!,
-    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      },
-      global: {
-        headers: {
-          Authorization: authHeader
-        }
-      }
+// Create server-side Supabase client with service role key for admin operations
+const supabaseAdmin = createClient(
+  process.env.EXPO_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
     }
-  );
-}
+  }
+);
 
 // Helper function to validate and get user from token
 async function validateUserFromToken(authHeader: string) {
   try {
-    const supabase = createAuthenticatedClient(authHeader);
+    const token = authHeader.replace('Bearer ', '');
     
-    // First try to get user from the token
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Use admin client to validate the token
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUser(token);
     
     if (userError) {
       console.error('User validation error:', userError);
@@ -85,11 +77,8 @@ export async function GET(request: Request) {
 
     console.log('✅ User authenticated successfully:', { userId: user.id, email: user.email });
 
-    // Create authenticated client for database operations
-    const supabase = createAuthenticatedClient(authHeader);
-
-    // Query characters for the authenticated user
-    const { data: characters, error } = await supabase
+    // Query characters for the authenticated user using admin client
+    const { data: characters, error } = await supabaseAdmin
       .from('characters')
       .select('*')
       .eq('user_id', user.id)
@@ -188,11 +177,8 @@ export async function POST(request: Request) {
 
     console.log('📝 Creating character:', { name: characterData.name, class: characterData.class_name });
 
-    // Create authenticated client for database operations
-    const supabase = createAuthenticatedClient(authHeader);
-
-    // Insert the character
-    const { data: character, error } = await supabase
+    // Insert the character using admin client
+    const { data: character, error } = await supabaseAdmin
       .from('characters')
       .insert([characterData])
       .select()

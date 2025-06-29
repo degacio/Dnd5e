@@ -13,32 +13,13 @@ const supabaseAdmin = createClient(
   }
 );
 
-// Helper function to create authenticated Supabase client
-function createAuthenticatedClient(authHeader: string) {
-  const token = authHeader.replace('Bearer ', '');
-  return createClient(
-    process.env.EXPO_PUBLIC_SUPABASE_URL!,
-    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      },
-      global: {
-        headers: {
-          Authorization: authHeader
-        }
-      }
-    }
-  );
-}
-
 // Helper function to validate and get user from token
 async function validateUserFromToken(authHeader: string) {
   try {
-    const supabase = createAuthenticatedClient(authHeader);
+    const token = authHeader.replace('Bearer ', '');
     
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Use admin client to validate the token
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUser(token);
     
     if (userError) {
       console.error('User validation error:', userError);
@@ -80,8 +61,7 @@ export async function GET(request: Request, { id }: { id: string }) {
       });
     }
 
-    const supabase = createAuthenticatedClient(authHeader);
-    const { data: character, error } = await supabase
+    const { data: character, error } = await supabaseAdmin
       .from('characters')
       .select('*')
       .eq('id', id)
@@ -141,8 +121,7 @@ export async function PUT(request: Request, { id }: { id: string }) {
       updated_at: new Date().toISOString(),
     };
 
-    const supabase = createAuthenticatedClient(authHeader);
-    const { data: characters, error } = await supabase
+    const { data: characters, error } = await supabaseAdmin
       .from('characters')
       .update(updateData)
       .eq('id', id)
@@ -208,10 +187,8 @@ export async function DELETE(request: Request, { id }: { id: string }) {
       });
     }
 
-    const supabase = createAuthenticatedClient(authHeader);
-
     // First, check if the character exists and belongs to the user
-    const { data: existingCharacter, error: checkError } = await supabase
+    const { data: existingCharacter, error: checkError } = await supabaseAdmin
       .from('characters')
       .select('id, name')
       .eq('id', id)
@@ -239,7 +216,7 @@ export async function DELETE(request: Request, { id }: { id: string }) {
     }
 
     // Now delete the character
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await supabaseAdmin
       .from('characters')
       .delete()
       .eq('id', id)
