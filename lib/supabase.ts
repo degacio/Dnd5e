@@ -4,6 +4,9 @@ import { Database } from '@/types/database';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
+let supabase: ReturnType<typeof createClient<Database>>;
+let supabaseAdmin: ReturnType<typeof createClient<Database>> | null;
+
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables. Please check your .env file.');
   console.error('EXPO_PUBLIC_SUPABASE_URL:', supabaseUrl);
@@ -13,16 +16,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
   const fallbackUrl = 'https://placeholder.supabase.co';
   const fallbackKey = 'placeholder-key';
   
-  export const supabase = createClient<Database>(fallbackUrl, fallbackKey, {
+  supabase = createClient<Database>(fallbackUrl, fallbackKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
   });
   
-  export const supabaseAdmin = null;
+  supabaseAdmin = null;
 } else {
-  export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
@@ -32,7 +35,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   // Service role client for server-side operations
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  export const supabaseAdmin = supabaseServiceKey 
+  supabaseAdmin = supabaseServiceKey 
     ? createClient<Database>(supabaseUrl, supabaseServiceKey, {
         auth: {
           autoRefreshToken: false,
@@ -41,3 +44,5 @@ if (!supabaseUrl || !supabaseAnonKey) {
       })
     : null;
 }
+
+export { supabase, supabaseAdmin };
