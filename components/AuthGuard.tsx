@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -11,7 +11,6 @@ interface AuthGuardProps {
 export function AuthGuard({ children }: AuthGuardProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
-  const mountedRef = useRef(true);
 
   useEffect(() => {
     console.log('🔐 AuthGuard mounted, checking auth status...');
@@ -28,9 +27,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
           email: session?.user?.email
         });
         
-        // Only update state if component is still mounted
-        if (!mountedRef.current) return;
-        
         const authenticated = !!session;
         setIsAuthenticated(authenticated);
         setLoading(false);
@@ -40,9 +36,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
           setIsAuthenticated(false);
           // Use setTimeout to avoid navigation during render
           setTimeout(() => {
-            if (mountedRef.current) {
-              router.replace('/auth');
-            }
+            router.replace('/auth');
           }, 100);
         } else if (event === 'SIGNED_IN' && session) {
           console.log('🚪 User signed in, setting authenticated state...');
@@ -53,7 +47,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
     return () => {
       console.log('🔐 AuthGuard unmounting, cleaning up subscription...');
-      mountedRef.current = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -62,9 +55,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
     try {
       console.log('🔍 Checking initial auth status...');
       const { data: { session }, error } = await supabase.auth.getSession();
-      
-      // Only update state if component is still mounted
-      if (!mountedRef.current) return;
       
       if (error) {
         console.error('❌ Error checking auth status:', error);
@@ -81,13 +71,9 @@ export function AuthGuard({ children }: AuthGuardProps) {
       }
     } catch (error) {
       console.error('💥 Error checking auth status:', error);
-      if (mountedRef.current) {
-        setIsAuthenticated(false);
-      }
+      setIsAuthenticated(false);
     } finally {
-      if (mountedRef.current) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   };
 
@@ -109,9 +95,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     
     // Use setTimeout to avoid navigation during render
     setTimeout(() => {
-      if (mountedRef.current) {
-        router.replace('/auth');
-      }
+      router.replace('/auth');
     }, 100);
     
     return (
