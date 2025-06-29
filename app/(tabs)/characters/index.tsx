@@ -627,7 +627,7 @@ export default function CharactersTab() {
                           <View style={styles.grimoireInfo}>
                             <Scroll size={24} color="#8E44AD" />
                             <View style={styles.grimoireDetails}>
-                              <Text style={styles.grimoire CharacterName}>{character.name}</Text>
+                              <Text style={styles.grimoireCharacterName}>{character.name}</Text>
                               <Text style={styles.grimoireClass}>
                                 {character.class_name} • Nível {character.level}
                               </Text>
