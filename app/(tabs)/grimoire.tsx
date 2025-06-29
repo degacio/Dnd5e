@@ -14,22 +14,7 @@ import { Character } from '@/types/database';
 import { Spell } from '@/types/spell';
 import { DnDClass } from '@/types/dndClass';
 import { supabase } from '@/lib/supabase';
-import { 
-  Scroll, 
-  User, 
-  RefreshCw, 
-  Sparkles, 
-  Zap, 
-  X,
-  ChevronRight,
-  Star,
-  Circle,
-  Minus,
-  Plus,
-  BookOpen,
-  Trash2,
-  AlertTriangle
-} from 'lucide-react-native';
+import { Scroll, User, RefreshCw, Sparkles, Zap, X, ChevronRight, Star, Circle, Minus, Plus, BookOpen, Trash2, TriangleAlert as AlertTriangle } from 'lucide-react-native';
 import classesData from '@/data/classes.json';
 
 interface SpellSlotInfo {
