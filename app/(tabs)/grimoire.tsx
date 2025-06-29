@@ -307,7 +307,13 @@ export function GrimoireTab() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        Alert.alert('Erro', 'Você precisa estar autenticado.');
+        const errorMessage = 'Você precisa estar autenticado para excluir um personagem.';
+        
+        if (Platform.OS === 'web') {
+          alert(`Erro: ${errorMessage}`);
+        } else {
+          Alert.alert('Erro', errorMessage);
+        }
         return;
       }
 
@@ -334,10 +340,35 @@ export function GrimoireTab() {
           Alert.alert('Sucesso', successMessage);
         }
       } else {
-        const errorText = await response.text();
-        console.error('Error deleting character:', errorText);
+        let errorMessage = 'Não foi possível excluir o personagem. Tente novamente.';
         
-        const errorMessage = 'Não foi possível excluir o personagem. Tente novamente.';
+        try {
+          // Try to parse JSON response for detailed error
+          const errorData = await response.json();
+          
+          if (errorData.type === 'network_error') {
+            errorMessage = 'Erro de conexão com o servidor. Verifique sua internet e tente novamente.';
+          } else if (errorData.type === 'auth_error') {
+            errorMessage = 'Sessão expirada. Faça login novamente.';
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch (parseError) {
+          // If JSON parsing fails, try to get text response
+          try {
+            const errorText = await response.text();
+            console.error('Error deleting character (text):', errorText);
+            
+            // Check for specific error patterns in text response
+            if (errorText.includes('fetch failed') || errorText.includes('network')) {
+              errorMessage = 'Erro de conexão com o banco de dados. Verifique sua internet e tente novamente.';
+            } else if (errorText.includes('authentication') || errorText.includes('unauthorized')) {
+              errorMessage = 'Sessão expirada. Faça login novamente.';
+            }
+          } catch (textError) {
+            console.error('Error parsing response:', textError);
+          }
+        }
         
         if (Platform.OS === 'web') {
           alert(`Erro: ${errorMessage}`);
@@ -348,7 +379,23 @@ export function GrimoireTab() {
     } catch (error) {
       console.error('Error deleting character:', error);
       
-      const errorMessage = 'Erro inesperado ao excluir personagem.';
+      let errorMessage = 'Erro inesperado ao excluir personagem.';
+      
+      // Check for network-related errors
+      if (error instanceof TypeError && (
+        error.message.includes('fetch') || 
+        error.message.includes('network') ||
+        error.message.includes('Failed to fetch')
+      )) {
+        errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+      } else if (error instanceof Error) {
+        // Check for other specific error types
+        if (error.message.includes('timeout')) {
+          errorMessage = 'Tempo limite excedido. Tente novamente.';
+        } else if (error.message.includes('abort')) {
+          errorMessage = 'Operação cancelada. Tente novamente.';
+        }
+      }
       
       if (Platform.OS === 'web') {
         alert(`Erro: ${errorMessage}`);

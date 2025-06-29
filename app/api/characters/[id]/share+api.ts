@@ -29,10 +29,64 @@ async function validateUserFromToken(authHeader: string) {
   }
 }
 
+// Helper function to determine error type and create appropriate response
+function createErrorResponse(error: any, operation: string) {
+  console.error(`${operation} error:`, error);
+  
+  // Check for network/connectivity errors
+  if (error.message && (
+    error.message.includes('fetch failed') ||
+    error.message.includes('network error') ||
+    error.message.includes('ECONNREFUSED') ||
+    error.message.includes('ENOTFOUND') ||
+    error.message.includes('timeout')
+  )) {
+    return new Response(JSON.stringify({ 
+      error: 'Erro de conexão',
+      message: 'Falha na comunicação com o servidor do banco de dados. Verifique sua conexão e tente novamente.',
+      type: 'network_error'
+    }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+  
+  // Check for authentication/permission errors
+  if (error.message && (
+    error.message.includes('JWT') ||
+    error.message.includes('authentication') ||
+    error.message.includes('permission')
+  )) {
+    return new Response(JSON.stringify({ 
+      error: 'Erro de autenticação',
+      message: 'Sessão expirada ou sem permissão. Faça login novamente.',
+      type: 'auth_error'
+    }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+  
+  // Generic database error
+  return new Response(JSON.stringify({ 
+    error: 'Erro no banco de dados',
+    message: error.message || 'Erro interno do servidor. Tente novamente em alguns instantes.',
+    details: error.details,
+    type: 'database_error'
+  }), {
+    status: 500,
+    headers: { 'Content-Type': 'application/json' }
+  });
+}
+
 export async function POST(request: Request, { id }: { id: string }) {
   try {
     if (!supabaseAdmin) {
-      return new Response(JSON.stringify({ error: 'Server configuration error' }), { 
+      return new Response(JSON.stringify({ 
+        error: 'Erro de configuração do servidor',
+        message: 'Configuração do servidor indisponível. Tente novamente mais tarde.',
+        type: 'server_error'
+      }), { 
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -41,7 +95,11 @@ export async function POST(request: Request, { id }: { id: string }) {
     const authHeader = request.headers.get('Authorization');
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Invalid authorization header' }), { 
+      return new Response(JSON.stringify({ 
+        error: 'Erro de autorização',
+        message: 'Token de autorização inválido ou ausente.',
+        type: 'auth_error'
+      }), { 
         status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -51,8 +109,10 @@ export async function POST(request: Request, { id }: { id: string }) {
 
     if (authError || !user) {
       return new Response(JSON.stringify({ 
-        error: 'Authentication failed',
-        details: authError?.message || 'Invalid token'
+        error: 'Erro de autenticação',
+        message: 'Falha na autenticação. Faça login novamente.',
+        details: authError?.message || 'Token inválido',
+        type: 'auth_error'
       }), { 
         status: 401,
         headers: { 'Content-Type': 'application/json' }
@@ -77,20 +137,14 @@ export async function POST(request: Request, { id }: { id: string }) {
       .single();
 
     if (error) {
-      console.error('Error generating share token:', error);
-      return new Response(JSON.stringify({ 
-        error: 'Database error',
-        message: error.message,
-        details: error.details 
-      }), { 
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return createErrorResponse(error, 'Database update');
     }
 
     if (!character) {
       return new Response(JSON.stringify({ 
-        error: 'Character not found or you do not have permission to share it'
+        error: 'Personagem não encontrado',
+        message: 'Personagem não encontrado ou você não tem permissão para compartilhá-lo.',
+        type: 'not_found'
       }), { 
         status: 404,
         headers: { 'Content-Type': 'application/json' }
@@ -103,9 +157,24 @@ export async function POST(request: Request, { id }: { id: string }) {
     });
   } catch (error) {
     console.error('API Error:', error);
+    
+    // Handle network errors in catch block
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      return new Response(JSON.stringify({ 
+        error: 'Erro de conexão',
+        message: 'Falha na comunicação com o banco de dados. Verifique sua conexão com a internet e tente novamente.',
+        type: 'network_error'
+      }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
     return new Response(JSON.stringify({ 
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Erro interno do servidor',
+      message: 'Erro inesperado ao gerar token de compartilhamento. Tente novamente em alguns instantes.',
+      details: error instanceof Error ? error.message : 'Erro desconhecido',
+      type: 'internal_error'
     }), { 
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -116,7 +185,11 @@ export async function POST(request: Request, { id }: { id: string }) {
 export async function DELETE(request: Request, { id }: { id: string }) {
   try {
     if (!supabaseAdmin) {
-      return new Response(JSON.stringify({ error: 'Server configuration error' }), { 
+      return new Response(JSON.stringify({ 
+        error: 'Erro de configuração do servidor',
+        message: 'Configuração do servidor indisponível. Tente novamente mais tarde.',
+        type: 'server_error'
+      }), { 
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -125,7 +198,11 @@ export async function DELETE(request: Request, { id }: { id: string }) {
     const authHeader = request.headers.get('Authorization');
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Invalid authorization header' }), { 
+      return new Response(JSON.stringify({ 
+        error: 'Erro de autorização',
+        message: 'Token de autorização inválido ou ausente.',
+        type: 'auth_error'
+      }), { 
         status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -135,8 +212,10 @@ export async function DELETE(request: Request, { id }: { id: string }) {
 
     if (authError || !user) {
       return new Response(JSON.stringify({ 
-        error: 'Authentication failed',
-        details: authError?.message || 'Invalid token'
+        error: 'Erro de autenticação',
+        message: 'Falha na autenticação. Faça login novamente.',
+        details: authError?.message || 'Token inválido',
+        type: 'auth_error'
       }), { 
         status: 401,
         headers: { 'Content-Type': 'application/json' }
@@ -155,28 +234,36 @@ export async function DELETE(request: Request, { id }: { id: string }) {
       .eq('user_id', user.id);
 
     if (error) {
-      console.error('Error revoking share token:', error);
-      return new Response(JSON.stringify({ 
-        error: 'Database error',
-        message: error.message,
-        details: error.details 
-      }), { 
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return createErrorResponse(error, 'Database update');
     }
 
     return new Response(JSON.stringify({ 
-      message: 'Share token revoked successfully' 
+      message: 'Token de compartilhamento revogado com sucesso',
+      success: true
     }), { 
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
     console.error('API Error:', error);
+    
+    // Handle network errors in catch block
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      return new Response(JSON.stringify({ 
+        error: 'Erro de conexão',
+        message: 'Falha na comunicação com o banco de dados. Verifique sua conexão com a internet e tente novamente.',
+        type: 'network_error'
+      }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
     return new Response(JSON.stringify({ 
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Erro interno do servidor',
+      message: 'Erro inesperado ao revogar token de compartilhamento. Tente novamente em alguns instantes.',
+      details: error instanceof Error ? error.message : 'Erro desconhecido',
+      type: 'internal_error'
     }), { 
       status: 500,
       headers: { 'Content-Type': 'application/json' }
