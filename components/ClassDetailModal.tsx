@@ -156,9 +156,8 @@ export function ClassDetailModal({ dndClass, visible, onClose }: ClassDetailModa
 
               <View style={styles.proficiencyGroup}>
                 <Text style={styles.proficiencyGroupTitle}>
-                  <Text style={{fontWeight: 'bold' }}Perícias:</Text> Escolha duas entre 
-              </Text> 
-                
+                  <Text style={{fontWeight: 'bold'}}>Perícias:</Text> Escolha duas entre:
+                </Text>
                 <Text style={styles.proficiencyGroupText}>
                   {dndClass.skillProficiencies.join(', ')}
                 </Text>
