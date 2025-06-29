@@ -11,10 +11,17 @@ import {
 import { Spell, School, SchoolColors } from '@/types/spell';
 import { SpellCard } from './SpellCard';
 import { SpellDetailModal } from './SpellDetailModal';
-import { Search, BookOpen, Filter, X } from 'lucide-react-native';
+import { Search, BookOpen, Filter, X, ChevronDown, ChevronRight } from 'lucide-react-native';
 
 interface SpellListProps {
   spells: Spell[];
+}
+
+interface SpellLevel {
+  level: number;
+  name: string;
+  spells: Spell[];
+  expanded: boolean;
 }
 
 export function SpellList({ spells }: SpellListProps) {
@@ -22,6 +29,7 @@ export function SpellList({ spells }: SpellListProps) {
   const [searchText, setSearchText] = useState('');
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [showClassFilter, setShowClassFilter] = useState(false);
+  const [expandedLevels, setExpandedLevels] = useState<Set<number>>(new Set([0, 1, 2, 3])); // Expand first few levels by default
 
   // Get all unique classes from spells
   const availableClasses = useMemo(() => {
@@ -38,8 +46,8 @@ export function SpellList({ spells }: SpellListProps) {
     return Array.from(classSet).sort();
   }, [spells]);
 
-  const filteredAndSortedSpells = useMemo(() => {
-    let filtered = spells.filter((spell) => {
+  const filteredSpells = useMemo(() => {
+    return spells.filter((spell) => {
       // Check search text
       const matchesSearch = !searchText || 
         spell.name.toLowerCase().includes(searchText.toLowerCase());
@@ -55,20 +63,51 @@ export function SpellList({ spells }: SpellListProps) {
       
       return matchesSearch && matchesClass;
     });
-
-    // Sort alphabetically by name
-    return filtered.sort((a, b) => a.name.localeCompare(b.name));
   }, [spells, searchText, selectedClass]);
+
+  const spellsByLevel = useMemo(() => {
+    const groups: Record<number, Spell[]> = {};
+    
+    filteredSpells.forEach((spell) => {
+      if (!groups[spell.level]) {
+        groups[spell.level] = [];
+      }
+      groups[spell.level].push(spell);
+    });
+
+    // Sort spells within each level alphabetically
+    Object.keys(groups).forEach(level => {
+      groups[parseInt(level)].sort((a, b) => a.name.localeCompare(b.name));
+    });
+
+    // Convert to array and sort by level (0-9)
+    return Array.from({ length: 10 }, (_, level) => ({
+      level,
+      name: getLevelName(level),
+      spells: groups[level] || [],
+      expanded: expandedLevels.has(level),
+    })).filter(levelGroup => levelGroup.spells.length > 0);
+  }, [filteredSpells, expandedLevels]);
+
+  const toggleLevel = (level: number) => {
+    const newExpanded = new Set(expandedLevels);
+    if (newExpanded.has(level)) {
+      newExpanded.delete(level);
+    } else {
+      newExpanded.add(level);
+    }
+    setExpandedLevels(newExpanded);
+  };
 
   const selectClass = (className: string | null) => {
     setSelectedClass(className);
     setShowClassFilter(false);
   };
 
-  const totalSpells = filteredAndSortedSpells.length;
+  const totalSpells = filteredSpells.length;
 
   const getLevelName = (level: number): string => {
-    return level === 0 ? 'Truque' : `${level}º Círculo`;
+    return level === 0 ? 'Truques' : `${level}º Círculo`;
   };
 
   const getLevelColor = (level: number): string => {
@@ -97,7 +136,9 @@ export function SpellList({ spells }: SpellListProps) {
         <View style={styles.spellHeader}>
           <View style={styles.spellTitleRow}>
             <View style={[styles.levelBadge, { backgroundColor: getLevelColor(item.level) }]}>
-              <Text style={styles.levelText}>{getLevelName(item.level)}</Text>
+              <Text style={styles.levelText}>
+                {item.level === 0 ? 'T' : item.level.toString()}
+              </Text>
             </View>
             <View style={styles.spellNameContainer}>
               <Text style={styles.spellName}>{item.name}</Text>
@@ -120,6 +161,45 @@ export function SpellList({ spells }: SpellListProps) {
           </Text>
         </View>
       </TouchableOpacity>
+    </View>
+  );
+
+  const renderLevelSection = ({ item }: { item: SpellLevel }) => (
+    <View style={styles.levelContainer}>
+      <TouchableOpacity
+        style={[
+          styles.levelHeader,
+          { backgroundColor: getLevelColor(item.level) },
+        ]}
+        onPress={() => toggleLevel(item.level)}
+        activeOpacity={0.8}
+      >
+        <View style={styles.levelHeaderContent}>
+          <View style={styles.levelTitleContainer}>
+            {item.expanded ? (
+              <ChevronDown size={22} color="#FFFFFF" />
+            ) : (
+              <ChevronRight size={22} color="#FFFFFF" />
+            )}
+            <Text style={styles.levelTitle}>
+              {item.name}
+            </Text>
+          </View>
+          <View style={styles.countBadge}>
+            <Text style={styles.countText}>{item.spells.length}</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+
+      {item.expanded && (
+        <View style={styles.spellsContainer}>
+          {item.spells.map((spell) => (
+            <View key={spell.id}>
+              {renderSpellItem({ item: spell })}
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 
@@ -171,12 +251,11 @@ export function SpellList({ spells }: SpellListProps) {
       </View>
 
       <FlatList
-        data={filteredAndSortedSpells}
-        keyExtractor={(item) => item.id}
+        data={spellsByLevel}
+        keyExtractor={(item) => item.level.toString()}
         showsVerticalScrollIndicator={false}
-        renderItem={renderSpellItem}
+        renderItem={renderLevelSection}
         contentContainerStyle={styles.listContent}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
 
       {/* Class Filter Modal */}
@@ -341,23 +420,84 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   listContent: {
+    paddingBottom: 24,
+  },
+  levelContainer: {
+    marginTop: 20,
+    marginHorizontal: 16,
+  },
+  levelHeader: {
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  levelHeaderContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  levelTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  levelTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginLeft: 12,
+  },
+  countBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderRadius: 20,
+    paddingHorizontal: 14,
     paddingVertical: 8,
+    minWidth: 44,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  countText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  spellsContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginTop: 12,
+    paddingVertical: 8,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
   },
   spellItemContainer: {
-    marginHorizontal: 16,
+    marginHorizontal: 8,
     marginVertical: 4,
   },
   spellItem: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
-    elevation: 2,
+    elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 2,
     borderLeftWidth: 4,
     borderLeftColor: '#D4AF37',
+    marginHorizontal: 8,
   },
   spellHeader: {
     marginBottom: 12,
@@ -370,12 +510,13 @@ const styles = StyleSheet.create({
   levelBadge: {
     borderRadius: 12,
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    minWidth: 60,
+    paddingVertical: 6,
+    minWidth: 32,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   levelText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     color: '#FFFFFF',
   },
@@ -427,9 +568,6 @@ const styles = StyleSheet.create({
     color: '#555',
     fontWeight: '500',
     lineHeight: 16,
-  },
-  separator: {
-    height: 8,
   },
   // Modal styles
   modalOverlay: {
