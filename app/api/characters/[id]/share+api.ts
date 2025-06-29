@@ -1,18 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Create authenticated Supabase client for each request
-function createAuthenticatedClient(authHeader: string) {
-  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
-  
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers: {
-        Authorization: authHeader,
-      },
-    },
-  });
-}
+// Create server-side Supabase client with service role key
+const supabaseAdmin = createClient(
+  process.env.EXPO_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 export async function POST(request: Request, { id }: { id: string }) {
   try {
@@ -22,16 +20,15 @@ export async function POST(request: Request, { id }: { id: string }) {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    const supabase = createAuthenticatedClient(authHeader);
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !user) {
       return new Response('Unauthorized', { status: 401 });
     }
 
     // Generate new share token and extend expiration
-    const { data: character, error } = await supabase
+    const { data: character, error } = await supabaseAdmin
       .from('characters')
       .update({
         share_token: crypto.randomUUID(),
@@ -66,16 +63,15 @@ export async function DELETE(request: Request, { id }: { id: string }) {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    const supabase = createAuthenticatedClient(authHeader);
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !user) {
       return new Response('Unauthorized', { status: 401 });
     }
 
     // Remove share token
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('characters')
       .update({
         share_token: null,

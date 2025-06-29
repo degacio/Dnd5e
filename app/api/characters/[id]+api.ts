@@ -1,19 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 import { CharacterUpdate } from '@/types/database';
 
-// Create authenticated Supabase client for each request
-function createAuthenticatedClient(authHeader: string) {
-  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
-  
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers: {
-        Authorization: authHeader,
-      },
-    },
-  });
-}
+// Create server-side Supabase client with service role key
+const supabaseAdmin = createClient(
+  process.env.EXPO_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 export async function GET(request: Request, { id }: { id: string }) {
   try {
@@ -23,9 +21,8 @@ export async function GET(request: Request, { id }: { id: string }) {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    const supabase = createAuthenticatedClient(authHeader);
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
@@ -34,7 +31,7 @@ export async function GET(request: Request, { id }: { id: string }) {
       });
     }
 
-    const { data: character, error } = await supabase
+    const { data: character, error } = await supabaseAdmin
       .from('characters')
       .select('*')
       .eq('id', id)
@@ -70,9 +67,8 @@ export async function PUT(request: Request, { id }: { id: string }) {
       });
     }
 
-    const supabase = createAuthenticatedClient(authHeader);
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
@@ -87,7 +83,7 @@ export async function PUT(request: Request, { id }: { id: string }) {
       updated_at: new Date().toISOString(),
     };
 
-    const { data: characters, error } = await supabase
+    const { data: characters, error } = await supabaseAdmin
       .from('characters')
       .update(updateData)
       .eq('id', id)
@@ -140,9 +136,8 @@ export async function DELETE(request: Request, { id }: { id: string }) {
       });
     }
 
-    const supabase = createAuthenticatedClient(authHeader);
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
@@ -151,7 +146,7 @@ export async function DELETE(request: Request, { id }: { id: string }) {
       });
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('characters')
       .delete()
       .eq('id', id)
