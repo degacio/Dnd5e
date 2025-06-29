@@ -22,22 +22,20 @@ function FormattedText({ text, style }: { text: string; style?: any }) {
   // Parse HTML tags and convert to React Native components
   const parseHtmlText = (htmlText: string) => {
     const parts = [];
-    let currentIndex = 0;
-    let keyCounter = 0;
+    let uniqueKey = 0; // Single counter for all keys to prevent collisions
 
     // Split by <br> tags first to handle line breaks
     const lines = htmlText.split(/<br\s*\/?>/gi);
     
     lines.forEach((line, lineIndex) => {
       if (lineIndex > 0) {
-        parts.push(<Text key={`br-${keyCounter++}`}>{'\n'}</Text>);
+        parts.push(<Text key={`br-${uniqueKey++}`}>{'\n'}</Text>);
       }
 
       // Process each line for bold and italic formatting
       const processLine = (text: string) => {
         const segments = [];
         let remaining = text;
-        let segmentKey = 0;
 
         while (remaining.length > 0) {
           // Look for bold text (**text** or <b>text</b> or <strong>text</strong>)
@@ -50,7 +48,7 @@ function FormattedText({ text, style }: { text: string; style?: any }) {
             // Add text before bold
             if (beforeBold) {
               segments.push(
-                <Text key={`text-${segmentKey++}`}>
+                <Text key={`text-${uniqueKey++}`}>
                   {processItalic(beforeBold)}
                 </Text>
               );
@@ -58,7 +56,7 @@ function FormattedText({ text, style }: { text: string; style?: any }) {
             
             // Add bold text
             segments.push(
-              <Text key={`bold-${segmentKey++}`} style={styles.boldText}>
+              <Text key={`bold-${uniqueKey++}`} style={styles.boldText}>
                 {processItalic(boldText)}
               </Text>
             );
@@ -67,7 +65,7 @@ function FormattedText({ text, style }: { text: string; style?: any }) {
           } else {
             // No more bold text, process remaining for italic
             segments.push(
-              <Text key={`text-${segmentKey++}`}>
+              <Text key={`text-${uniqueKey++}`}>
                 {processItalic(remaining)}
               </Text>
             );
@@ -82,7 +80,6 @@ function FormattedText({ text, style }: { text: string; style?: any }) {
       const processItalic = (text: string) => {
         const segments = [];
         let remaining = text;
-        let segmentKey = 0;
 
         while (remaining.length > 0) {
           const italicMatch = remaining.match(/(\*(.+?)\*|<i>(.+?)<\/i>|<em>(.+?)<\/em>)/i);
@@ -98,7 +95,7 @@ function FormattedText({ text, style }: { text: string; style?: any }) {
             
             // Add italic text
             segments.push(
-              <Text key={`italic-${segmentKey++}`} style={styles.italicText}>
+              <Text key={`italic-${uniqueKey++}`} style={styles.italicText}>
                 {italicText}
               </Text>
             );
