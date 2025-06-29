@@ -24,8 +24,11 @@ import {
   Star,
   Circle,
   Minus,
-  Plus
+  Plus,
+  Shield,
+  UserPlus
 } from 'lucide-react-native';
+import { router } from 'expo-router';
 import classesData from '@/data/classes.json';
 
 interface SpellSlotInfo {
@@ -101,6 +104,10 @@ export default function GrimoireTab() {
   const handleRefresh = async () => {
     setRefreshing(true);
     await loadData();
+  };
+
+  const navigateToCharacters = () => {
+    router.push('/characters');
   };
 
   const getSpellByName = (spellName: string): Spell | null => {
@@ -276,6 +283,18 @@ export default function GrimoireTab() {
         </TouchableOpacity>
       </View>
 
+      {/* Characters Management Button */}
+      <View style={styles.managementSection}>
+        <TouchableOpacity 
+          style={styles.charactersButton}
+          onPress={navigateToCharacters}
+          activeOpacity={0.8}
+        >
+          <Shield size={24} color="#FFFFFF" />
+          <Text style={styles.charactersButtonText}>Gerenciar Personagens</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {characters.length > 0 ? (
           <View style={styles.charactersContainer}>
@@ -332,6 +351,15 @@ export default function GrimoireTab() {
             <Text style={styles.emptyText}>
               Você não possui personagens conjuradores. Apenas classes que podem lançar magias aparecem no grimório.
             </Text>
+            
+            <TouchableOpacity 
+              style={styles.createCharacterButton}
+              onPress={navigateToCharacters}
+              activeOpacity={0.8}
+            >
+              <UserPlus size={20} color="#FFFFFF" />
+              <Text style={styles.createCharacterButtonText}>Criar Personagem Conjurador</Text>
+            </TouchableOpacity>
           </View>
         )}
       </ScrollView>
@@ -532,6 +560,33 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: 'rgba(212, 175, 55, 0.1)',
   },
+  managementSection: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E8E8',
+  },
+  charactersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#D4AF37',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    gap: 12,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  charactersButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
   content: {
     flex: 1,
   },
@@ -617,6 +672,21 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 24,
+    marginBottom: 32,
+  },
+  createCharacterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#27AE60',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  createCharacterButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   // Modal styles
   modalContainer: {
