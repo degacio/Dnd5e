@@ -11,7 +11,7 @@ import {
 import { Spell, School, SchoolColors } from '@/types/spell';
 import { SpellCard } from './SpellCard';
 import { SpellDetailModal } from './SpellDetailModal';
-import { Search, BookOpen, Filter, X, Sparkles } from 'lucide-react-native';
+import { Search, BookOpen, Filter, X, Sparkles, ChevronDown, ChevronRight } from 'lucide-react-native';
 
 interface SpellListProps {
   spells: Spell[];
@@ -54,6 +54,7 @@ export function SpellList({ spells }: SpellListProps) {
   const [searchText, setSearchText] = useState('');
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [showClassFilter, setShowClassFilter] = useState(false);
+  const [expandedLevels, setExpandedLevels] = useState<Set<number>>(new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])); // All levels expanded by default
 
   // Get all unique classes from spells
   const availableClasses = useMemo(() => {
@@ -100,7 +101,7 @@ export function SpellList({ spells }: SpellListProps) {
     });
   }, [spells, searchText, selectedClass]);
 
-  // Create list items with headers
+  // Create list items with headers and respect expanded state
   const listItems = useMemo(() => {
     const items: SpellListItem[] = [];
     let currentLevel = -1;
@@ -116,16 +117,30 @@ export function SpellList({ spells }: SpellListProps) {
         });
       }
 
-      // Add spell item
-      items.push({
-        type: 'spell',
-        spell,
-        id: spell.id,
-      });
+      // Add spell item only if the level is expanded
+      if (expandedLevels.has(spell.level)) {
+        items.push({
+          type: 'spell',
+          spell,
+          id: spell.id,
+        });
+      }
     });
 
     return items;
-  }, [filteredAndSortedSpells]);
+  }, [filteredAndSortedSpells, expandedLevels]);
+
+  const toggleLevelExpansion = (level: number) => {
+    setExpandedLevels(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(level)) {
+        newSet.delete(level);
+      } else {
+        newSet.add(level);
+      }
+      return newSet;
+    });
+  };
 
   const selectClass = (className: string | null) => {
     setSelectedClass(className);
@@ -137,18 +152,34 @@ export function SpellList({ spells }: SpellListProps) {
   const renderItem = ({ item }: { item: SpellListItem }) => {
     if (item.type === 'header') {
       const levelColor = getLevelColor(item.level!);
+      const isExpanded = expandedLevels.has(item.level!);
+      const spellsInLevel = filteredAndSortedSpells.filter(s => s.level === item.level).length;
+      
       return (
-        <View style={[styles.levelHeader, { backgroundColor: levelColor }]}>
-          <Sparkles size={16} color="#FFFFFF" />
-          <Text style={styles.levelHeaderText}>
-            {getLevelHeaderName(item.level!)}
-          </Text>
-          <View style={styles.levelHeaderBadge}>
-            <Text style={styles.levelHeaderBadgeText}>
-              {filteredAndSortedSpells.filter(s => s.level === item.level).length}
-            </Text>
+        <TouchableOpacity
+          style={[styles.levelHeader, { backgroundColor: levelColor }]}
+          onPress={() => toggleLevelExpansion(item.level!)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.levelHeaderContent}>
+            <View style={styles.levelHeaderLeft}>
+              {isExpanded ? (
+                <ChevronDown size={16} color="#FFFFFF" />
+              ) : (
+                <ChevronRight size={16} color="#FFFFFF" />
+              )}
+              <Sparkles size={16} color="#FFFFFF" style={styles.levelHeaderIcon} />
+              <Text style={styles.levelHeaderText}>
+                {getLevelHeaderName(item.level!)}
+              </Text>
+            </View>
+            <View style={styles.levelHeaderBadge}>
+              <Text style={styles.levelHeaderBadgeText}>
+                {spellsInLevel}
+              </Text>
+            </View>
           </View>
-        </View>
+        </TouchableOpacity>
       );
     }
 
@@ -239,13 +270,6 @@ export function SpellList({ spells }: SpellListProps) {
         showsVerticalScrollIndicator={false}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
-        getItemLayout={(data, index) => {
-          const item = data?.[index];
-          if (item?.type === 'header') {
-            return { length: 44, offset: index * 44, index };
-          }
-          return { length: 88, offset: index * 88, index };
-        }}
       />
 
       {/* Class Filter Modal */}
@@ -410,10 +434,6 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   levelHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
     marginHorizontal: 8,
     marginTop: 8,
     marginBottom: 4,
@@ -423,6 +443,21 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
+  },
+  levelHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  levelHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  levelHeaderIcon: {
+    marginLeft: 8,
   },
   levelHeaderText: {
     fontSize: 14,
