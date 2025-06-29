@@ -39,7 +39,9 @@ import {
   TriangleAlert as AlertTriangle,
   ArrowLeft,
   Heart,
-  Shield
+  Shield,
+  Wifi,
+  WifiOff
 } from 'lucide-react-native';
 import classesData from '@/data/classes.json';
 
@@ -71,13 +73,42 @@ export default function CharactersTab() {
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [deletingCharacter, setDeletingCharacter] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [networkError, setNetworkError] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
 
+  const checkNetworkConnection = async (): Promise<boolean> => {
+    try {
+      // Try to fetch a simple endpoint to check connectivity
+      const response = await fetch('/api/health', {
+        method: 'GET',
+        timeout: 5000,
+      });
+      return response.ok;
+    } catch (error) {
+      console.log('Network check failed:', error);
+      return false;
+    }
+  };
+
   const loadData = async () => {
     try {
+      setNetworkError(null);
+      
+      // Check network connectivity first
+      const networkStatus = await checkNetworkConnection();
+      setIsOnline(networkStatus);
+      
+      if (!networkStatus) {
+        setNetworkError('Sem conexão com a internet. Verifique sua conexão e tente novamente.');
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
       // Load spells data
       const spellsData = require('@/data/spells.json');
       setAllSpells(spellsData);
@@ -86,6 +117,7 @@ export default function CharactersTab() {
       await loadCharacters();
     } catch (error) {
       console.error('Error loading data:', error);
+      setNetworkError('Erro ao carregar dados. Tente novamente.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -97,22 +129,45 @@ export default function CharactersTab() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
+        console.log('No session found, user not authenticated');
         setLoading(false);
         return;
       }
+
+      console.log('Making request to /api/characters with session token');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
       const response = await fetch('/api/characters', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
+        signal: controller.signal,
       });
 
-      if (response.ok) {
-        const charactersData = await response.json();
-        setCharacters(charactersData);
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
+
+      const charactersData = await response.json();
+      console.log('Characters loaded successfully:', charactersData.length);
+      setCharacters(charactersData);
+      setNetworkError(null);
     } catch (error) {
       console.error('Error loading characters:', error);
+      
+      if (error.name === 'AbortError') {
+        setNetworkError('Tempo limite excedido. Verifique sua conexão e tente novamente.');
+      } else if (error.message.includes('Network request failed')) {
+        setNetworkError('Falha na conexão. Verifique se o servidor está rodando e tente novamente.');
+      } else if (error.message.includes('fetch')) {
+        setNetworkError('Erro de rede. Verifique sua conexão com a internet.');
+      } else {
+        setNetworkError(`Erro ao carregar personagens: ${error.message}`);
+      }
     }
   };
 
@@ -122,6 +177,15 @@ export default function CharactersTab() {
   };
 
   const handleCreateCharacter = () => {
+    if (!isOnline) {
+      const message = 'Sem conexão com a internet. Não é possível criar personagens offline.';
+      if (Platform.OS === 'web') {
+        alert(`Erro de Conexão: ${message}`);
+      } else {
+        Alert.alert('Erro de Conexão', message);
+      }
+      return;
+    }
     router.push('/characters/create');
   };
 
@@ -244,6 +308,16 @@ export default function CharactersTab() {
   const updateSpellSlot = async (level: number, type: 'current' | 'max', delta: number) => {
     if (!selectedCharacterSpells) return;
 
+    if (!isOnline) {
+      const message = 'Sem conexão com a internet. Não é possível atualizar espaços de magia offline.';
+      if (Platform.OS === 'web') {
+        alert(`Erro de Conexão: ${message}`);
+      } else {
+        Alert.alert('Erro de Conexão', message);
+      }
+      return;
+    }
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -276,6 +350,9 @@ export default function CharactersTab() {
         currentSlots[levelKey] = slots;
 
         // Update character
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
         const response = await fetch(`/api/characters/${selectedCharacterSpells.character.id}`, {
           method: 'PUT',
           headers: {
@@ -285,7 +362,10 @@ export default function CharactersTab() {
           body: JSON.stringify({
             spell_slots: currentSlots,
           }),
+          signal: controller.signal,
         });
+
+        clearTimeout(timeoutId);
 
         if (response.ok) {
           const updatedCharacter = await response.json();
@@ -299,18 +379,32 @@ export default function CharactersTab() {
           const updatedCharacterSpells = prepareCharacterSpells(updatedCharacter);
           setSelectedCharacterSpells(updatedCharacterSpells);
         } else {
-          Alert.alert('Erro', 'Não foi possível atualizar os espaços de magia.');
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
       }
     } catch (error) {
       console.error('Error updating spell slot:', error);
-      Alert.alert('Erro', 'Erro ao atualizar espaços de magia.');
+      if (error.name === 'AbortError') {
+        Alert.alert('Erro', 'Tempo limite excedido. Tente novamente.');
+      } else {
+        Alert.alert('Erro', 'Erro ao atualizar espaços de magia.');
+      }
     }
   };
 
   const handleAddSpellsToGrimoire = async (spells: Spell[]) => {
     if (!selectedCharacterSpells) {
       Alert.alert('Erro', 'Nenhum personagem selecionado.');
+      return;
+    }
+
+    if (!isOnline) {
+      const message = 'Sem conexão com a internet. Não é possível adicionar magias offline.';
+      if (Platform.OS === 'web') {
+        alert(`Erro de Conexão: ${message}`);
+      } else {
+        Alert.alert('Erro de Conexão', message);
+      }
       return;
     }
 
@@ -350,6 +444,9 @@ export default function CharactersTab() {
       const updatedSpells = [...currentSpells, ...spellsToAdd];
 
       // Update character
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
       const response = await fetch(`/api/characters/${selectedCharacterSpells.character.id}`, {
         method: 'PUT',
         headers: {
@@ -359,7 +456,10 @@ export default function CharactersTab() {
         body: JSON.stringify({
           spells_known: updatedSpells,
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const updatedCharacter = await response.json();
@@ -378,18 +478,30 @@ export default function CharactersTab() {
           `${newSpells.length} magia(s) adicionada(s) ao grimório de ${selectedCharacterSpells.character.name}!`
         );
       } else {
-        const errorText = await response.text();
-        console.error('Error updating character:', errorText);
-        Alert.alert('Erro', 'Não foi possível adicionar as magias ao grimório.');
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
       console.error('Error adding spells to grimoire:', error);
-      Alert.alert('Erro', 'Erro ao adicionar magias ao grimório.');
+      if (error.name === 'AbortError') {
+        Alert.alert('Erro', 'Tempo limite excedido. Tente novamente.');
+      } else {
+        Alert.alert('Erro', 'Erro ao adicionar magias ao grimório.');
+      }
     }
   };
 
   const handleDeleteCharacter = async () => {
     if (!selectedCharacterSpells) return;
+
+    if (!isOnline) {
+      const message = 'Sem conexão com a internet. Não é possível excluir personagens offline.';
+      if (Platform.OS === 'web') {
+        alert(`Erro de Conexão: ${message}`);
+      } else {
+        Alert.alert('Erro de Conexão', message);
+      }
+      return;
+    }
 
     setDeletingCharacter(true);
     
@@ -401,12 +513,18 @@ export default function CharactersTab() {
         return;
       }
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
       const response = await fetch(`/api/characters/${selectedCharacterSpells.character.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         // Remove character from local state
@@ -425,26 +543,25 @@ export default function CharactersTab() {
           Alert.alert('Sucesso', successMessage);
         }
       } else {
-        const errorText = await response.text();
-        console.error('Error deleting character:', errorText);
-        
-        const errorMessage = 'Não foi possível excluir o personagem. Tente novamente.';
-        
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error deleting character:', error);
+      
+      if (error.name === 'AbortError') {
+        const errorMessage = 'Tempo limite excedido. Tente novamente.';
         if (Platform.OS === 'web') {
           alert(`Erro: ${errorMessage}`);
         } else {
           Alert.alert('Erro', errorMessage);
         }
-      }
-    } catch (error) {
-      console.error('Error deleting character:', error);
-      
-      const errorMessage = 'Erro inesperado ao excluir personagem.';
-      
-      if (Platform.OS === 'web') {
-        alert(`Erro: ${errorMessage}`);
       } else {
-        Alert.alert('Erro', errorMessage);
+        const errorMessage = 'Erro inesperado ao excluir personagem.';
+        if (Platform.OS === 'web') {
+          alert(`Erro: ${errorMessage}`);
+        } else {
+          Alert.alert('Erro', errorMessage);
+        }
       }
     } finally {
       setDeletingCharacter(false);
@@ -466,6 +583,16 @@ export default function CharactersTab() {
   };
 
   const handleGenerateToken = async (characterId: string) => {
+    if (!isOnline) {
+      const message = 'Sem conexão com a internet. Não é possível gerar tokens offline.';
+      if (Platform.OS === 'web') {
+        alert(`Erro de Conexão: ${message}`);
+      } else {
+        Alert.alert('Erro de Conexão', message);
+      }
+      return { share_token: '', expires_at: '' };
+    }
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -479,12 +606,18 @@ export default function CharactersTab() {
         return { share_token: '', expires_at: '' };
       }
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
       const response = await fetch(`/api/characters/${characterId}/share`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const result = await response.json();
@@ -507,15 +640,29 @@ export default function CharactersTab() {
         
         return result;
       } else {
-        throw new Error('Não foi possível gerar o token');
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
       console.error('Error generating token:', error);
-      throw error;
+      if (error.name === 'AbortError') {
+        throw new Error('Tempo limite excedido. Tente novamente.');
+      } else {
+        throw new Error('Não foi possível gerar o token');
+      }
     }
   };
 
   const handleRevokeToken = async (characterId: string) => {
+    if (!isOnline) {
+      const message = 'Sem conexão com a internet. Não é possível revogar tokens offline.';
+      if (Platform.OS === 'web') {
+        alert(`Erro de Conexão: ${message}`);
+      } else {
+        Alert.alert('Erro de Conexão', message);
+      }
+      return;
+    }
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -529,12 +676,18 @@ export default function CharactersTab() {
         return;
       }
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
       const response = await fetch(`/api/characters/${characterId}/share`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         // Update local character data
@@ -553,11 +706,15 @@ export default function CharactersTab() {
           } : null);
         }
       } else {
-        throw new Error('Não foi possível revogar o token');
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
       console.error('Error revoking token:', error);
-      throw error;
+      if (error.name === 'AbortError') {
+        throw new Error('Tempo limite excedido. Tente novamente.');
+      } else {
+        throw new Error('Não foi possível revogar o token');
+      }
     }
   };
 
@@ -587,6 +744,54 @@ export default function CharactersTab() {
       <SafeAreaView style={styles.loadingContainer}>
         <Users size={48} color="#D4AF37" />
         <Text style={styles.loadingText}>Carregando...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  // Show network error if there's one
+  if (networkError) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.titleContainer}>
+            <Users size={28} color="#D4AF37" />
+            <Text style={styles.title}>Personagens</Text>
+          </View>
+          <Text style={styles.subtitle}>
+            Gerencie seus personagens e explore classes
+          </Text>
+          
+          <TouchableOpacity 
+            style={styles.refreshButton}
+            onPress={handleRefresh}
+            disabled={refreshing}
+          >
+            <RefreshCw size={20} color="#D4AF37" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.errorContainer}>
+          <View style={styles.errorContent}>
+            {isOnline ? (
+              <Wifi size={64} color="#E74C3C" />
+            ) : (
+              <WifiOff size={64} color="#E74C3C" />
+            )}
+            <Text style={styles.errorTitle}>Erro de Conexão</Text>
+            <Text style={styles.errorMessage}>{networkError}</Text>
+            
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={handleRefresh}
+              disabled={refreshing}
+            >
+              <RefreshCw size={20} color="#FFFFFF" />
+              <Text style={styles.retryButtonText}>
+                {refreshing ? 'Tentando...' : 'Tentar Novamente'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </SafeAreaView>
     );
   }
@@ -1137,6 +1342,46 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 24,
+  },
+  // Error container styles
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  errorContent: {
+    alignItems: 'center',
+    maxWidth: 300,
+  },
+  errorTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#333',
+    marginTop: 20,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  errorMessage: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E74C3C',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    gap: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   // Character Detail View Styles
   detailHeader: {
