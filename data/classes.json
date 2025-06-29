@@ -1,5 +1,60 @@
 [
   {
+    "id": "artificer",
+    "name": "Artífice",
+    "description": "Um mestre da magia através de invenções, infundindo objetos mundanos com poder mágico.",
+    "hitDie": "d8",
+    "primaryAbility": ["Inteligência"],
+    "savingThrowProficiencies": ["Constituição", "Inteligência"],
+    "skillProficiencies": ["Arcanismo", "História", "Investigação", "Medicina", "Natureza", "Percepção", "Prestidigitação"],
+    "armorProficiencies": ["Armaduras leves", "Armaduras médias", "Escudos"],
+    "weaponProficiencies": ["Armas simples", "Armas de fogo"],
+    "toolProficiencies": ["Ferramentas de ladrão", "Kit de ferramentas de artesão", "Ferramentas de alquimista"],
+    "startingEquipment": [
+      "Qualquer duas armas simples",
+      "Besta leve e 20 virotes",
+      "Armadura de couro batido ou armadura de couro",
+      "Ferramentas de ladrão e kit de masmorra"
+    ],
+    "classFeatures": [
+      {
+        "level": 1,
+        "name": "Infusão Mágica",
+        "description": "Você ganhou a habilidade de imbuir objetos mundanos com certas infusões mágicas."
+      },
+      {
+        "level": 1,
+        "name": "Conjuração",
+        "description": "Você estudou os funcionamentos da magia e como lançar magias, canalizando a magia através de objetos."
+      },
+      {
+        "level": 2,
+        "name": "Infusões",
+        "description": "Você ganhou a habilidade de imbuir objetos mundanos com certas infusões mágicas."
+      },
+      {
+        "level": 3,
+        "name": "Especialista Artífice",
+        "description": "Você escolhe o tipo de especialista que você é."
+      }
+    ],
+    "spellcasting": {
+      "ability": "Inteligência",
+      "cantripsKnown": [2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4],
+      "spellsKnown": [0, 2, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, 13],
+      "spellSlots": {
+        "1": [0, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+        "2": [0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+        "3": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+        "4": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1],
+        "5": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1]
+      },
+      "ritualCasting": true,
+      "spellcastingFocus": "Foco de conjuração"
+    },
+    "subclasses": ["Alquimista", "Armeiro", "Artilheiro de Batalha"]
+  },
+  {
     "id": "barbarian",
     "name": "Bárbaro",
     "description": "Um guerreiro primitivo de fúria incontrolável em batalha.",
@@ -19,7 +74,7 @@
       {
         "level": 1,
         "name": "Fúria",
-        "description": "Na batalha, você luta com uma ferocidade primitiva. Em seu turno, você pode entrar em fúria como uma ação bônus.\n\nDurante essa fúria, você ganha os seguintes benefícios se não estiver usando armadura pesada:\n\n• Você tem vantagem em testes de Força e em salvaguardas de Força.\n• Quando realiza um ataque com arma corpo a corpo usando Força, você recebe um bônus no dano que aumenta conforme você sobe de nível como um bárbaro, conforme mostrado na coluna de Dano da Fúria da tabela O Bárbaro.\n• Você tem resistência a dano contundente, perfurante e cortante.\n\nSe você é capaz de lançar magias, não pode lançá-las ou concentrar-se nelas enquanto está em fúria.\n\nSua fúria dura 1 minuto e termina antecipadamente se você ficar inconsciente ou se seu turno terminar e você não tiver atacado uma criatura hostil desde o seu último turno ou não tiver sofrido dano desde então. Você também pode encerrar sua fúria em seu turno como uma ação bônus. Uma vez que você entrou em fúria o número de vezes mostrado para o seu nível de bárbaro na coluna de Fúria da tabela O Bárbaro, você deve terminar um descanso longo antes de poder entrar em Fúria novamente."
+        "description": "Na batalha, você luta com uma ferocidade primitiva. Em seu turno, você pode entrar em fúria como uma ação bônus."
       },
       {
         "level": 1,
@@ -29,98 +84,15 @@
       {
         "level": 2,
         "name": "Ataque Descuidado",
-        "description": "A partir do 2º nível, você pode descartar todas as preocupações com defesa para atacar com uma feroz desesperação. Quando você realiza seu primeiro ataque em seu turno, você pode decidir atacar imprudentemente. Fazê-lo lhe concede vantagem nos rolagens de ataque de armas corpo a corpo usando Força durante este turno, mas as rolagens de ataque contra você têm vantagem até o seu próximo turno."
+        "description": "A partir do 2º nível, você pode descartar todas as preocupações com defesa para atacar com uma feroz desesperação."
       },
       {
         "level": 2,
         "name": "Sentido de Perigo",
-        "description": "No 2º nível, você desenvolve um sentido incomum de quando as coisas nas proximidades não estão como deveriam, dando-lhe uma vantagem quando se esquiva de perigos. Você tem vantagem em salvaguardas de Destreza contra efeitos que você pode ver, como armadilhas e magias. Para obter esse benefício, você não pode estar cego, ensurdecido ou incapacitado."
-      },
-      {
-        "level": 3,
-        "name": "Trilha Primitiva",
-        "description": "No 3º nível, você escolhe uma trilha que molda a natureza da sua fúria. As trilhas são detalhadas ao final da descrição dessa classe. Sua escolha concede características a você no 3º nível e novamente no 6º, 10º e 14º níveis."
-      },
-      {
-        "level": 4,
-        "name": "Aumento no Valor de Atributo",
-        "description": "Quando você atinge o 4º nível, e novamente no 8º, 12º, 16º e 19º níveis, você pode aumentar um atributo de sua escolha em 2 pontos, ou você pode aumentar dois atributos de sua escolha em 1 ponto cada. Como de costume, você não pode aumentar um atributo acima de 20 usando esse recurso."
-      },
-      {
-        "level": 5,
-        "name": "Ataque Extra",
-        "description": "A partir do 5º nível, você pode realizar dois ataques, em vez de um, sempre que realizar a ação Atacar em seu turno."
-      },
-      {
-        "level": 5,
-        "name": "Movimento Rápido",
-        "description": "Começando no 5º nível, sua velocidade aumenta em 3m quando você não está usando armadura pesada."
-      },
-      {
-        "level": 7,
-        "name": "Instintos Primitivos",
-        "description": "No 7º nível, seus instintos estão tão afiados que você tem vantagem em rolagens de iniciativa. Além disso, se você estiver surpreso no início do combate e não estiver incapacitado, você pode agir normalmente em seu primeiro turno, mas somente se entrar em fúria antes de fazer qualquer outra coisa naquele turno."
-      },
-      {
-        "level": 9,
-        "name": "Crítico Brutal",
-        "description": "Começando no 9º nível, você pode rolar um dado de dano adicional ao determinar o dano extra de um acerto crítico com um ataque corpo a corpo. Isso aumenta para dois dados adicionais no 13º nível e três dados adicionais no 17º nível."
-      },
-      {
-        "level": 11,
-        "name": "Fúria Implacável",
-        "description": "A partir do 11º nível, sua fúria pode mantê-lo lutando apesar de ferimentos graves. Se você chegar a 0 pontos de vida enquanto está em fúria e não morrer imediatamente, você pode fazer uma salvaguarda de Constituição CD 10. Se tiver sucesso, você cairá a 1 ponto de vida em vez disso.\n\nCada vez que você usa esse recurso após o primeiro, a CD aumenta em 5. Quando você terminar um descanso curto ou longo, a CD é redefinida para 10."
-      },
-      {
-        "level": 15,
-        "name": "Fúria Persistente",
-        "description": "A partir do 15º nível, sua fúria termina antecipadamente apenas se você ficar inconsciente ou escolher encerrá-la."
-      },
-      {
-        "level": 18,
-        "name": "Fúria Indomável",
-        "description": "A partir do 18º nível, se sua soma para um teste de Força for menor do que seu valor de Força, você pode usar esse valor no lugar da soma."
-      },
-      {
-        "level": 20,
-        "name": "Campeão Primitivo",
-        "description": "No 20º nível, você incorpora o poder da natureza. Seus valores de Força e Constituição aumentam em 4. Seu máximo para esses valores agora é 24."
+        "description": "No 2º nível, você desenvolve um sentido incomum de quando as coisas nas proximidades não estão como deveriam."
       }
     ],
-    "subclasses": [
-      {
-        "name": "Caminho do Berserker",
-        "description": "Para alguns bárbaros, a fúria é um meio para um fim – esse fim sendo a violência. O Caminho do Berserker é um caminho de fúria desenfreada, escorrendo sangue.",
-        "features": [
-          {
-            "level": 3,
-            "name": "Frenesi",
-            "description": "Quando você escolhe esse caminho no 3º nível, você pode entrar em um frenesi quando está em fúria. Se você fizer isso, pela duração da sua fúria você pode realizar um único ataque corpo a corpo com arma como uma ação bônus em cada um dos seus turnos após esse. Quando sua fúria acabar, você sofre um nível de exaustão."
-          },
-          {
-            "level": 6,
-            "name": "Fúria Incontrolável",
-            "description": "A partir do 6º nível, você não pode ser enfeitiçado ou amedrontado enquanto está em fúria. Se você está enfeitiçado ou amedrontado quando entrar em fúria, o efeito é suspenso pela duração da fúria."
-          }
-        ]
-      },
-      {
-        "name": "Caminho do Guardião Totêmico",
-        "description": "O Caminho do Guardião Totêmico é uma jornada espiritual, enquanto o bárbaro aceita um espírito animal como guia, protetor e inspiração.",
-        "features": [
-          {
-            "level": 3,
-            "name": "Buscador Espiritual",
-            "description": "Seu caminho é buscar sintonia com o mundo natural, dando-lhe afinidade com as bestas. No 3º nível, quando você adota esse caminho, você ganha a habilidade de conjurar as magias sentidos animalescos e falar com animais, mas apenas como rituais."
-          },
-          {
-            "level": 3,
-            "name": "Espírito Totêmico",
-            "description": "No 3º nível, quando você adota esse caminho, você escolhe um espírito totêmico e ganha a característica dele. Você deve fazer ou adquirir um objeto totêmico físico."
-          }
-        ]
-      }
-    ]
+    "subclasses": ["Caminho do Berserker", "Caminho do Guardião Totêmico"]
   },
   {
     "id": "bard",
