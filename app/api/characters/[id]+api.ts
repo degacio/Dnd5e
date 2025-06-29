@@ -1,7 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase';
 import { CharacterUpdate } from '@/types/database';
 
-// Helper function to validate and get user from token
+// Helper para validar e obter o usuário a partir do token
 async function validateUserFromToken(authHeader: string) {
   try {
     if (!supabaseAdmin) {
@@ -9,7 +9,6 @@ async function validateUserFromToken(authHeader: string) {
     }
 
     const token = authHeader.replace('Bearer ', '');
-
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
 
     if (userError) {
@@ -29,40 +28,41 @@ async function validateUserFromToken(authHeader: string) {
   }
 }
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const id = params.id;
+function extractIdFromUrl(request: Request): string | null {
+  const url = new URL(request.url);
+  const segments = url.pathname.split('/');
+  return segments.pop() || null;
+}
+
+export async function GET(request: Request) {
+  const id = extractIdFromUrl(request);
+
+  if (!id) {
+    return new Response(JSON.stringify({ error: 'Missing character ID in URL' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 
   try {
     if (!supabaseAdmin) {
-      console.error('Supabase admin client not initialized - missing SUPABASE_SERVICE_ROLE_KEY');
+      console.error('Supabase admin client not initialized');
       return new Response(JSON.stringify({
         error: 'Server configuration error',
         details: 'Supabase admin client not available'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      }), { status: 500 });
     }
 
     const authHeader = request.headers.get('Authorization');
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Invalid authorization header' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return new Response(JSON.stringify({ error: 'Invalid authorization header' }), { status: 401 });
     }
 
     const { user, error: authError } = await validateUserFromToken(authHeader);
 
     if (authError || !user) {
-      return new Response(JSON.stringify({
-        error: 'Authentication failed',
-        details: authError?.message || 'Invalid token'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return new Response(JSON.stringify({ error: 'Authentication failed', details: authError?.message || 'Invalid token' }), { status: 401 });
     }
 
     const { data: character, error } = await supabaseAdmin
@@ -77,10 +77,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return new Response(JSON.stringify({
         error: error.code === 'PGRST116' ? 'Character not found' : 'Database error',
         details: error.message
-      }), {
-        status: error.code === 'PGRST116' ? 404 : 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      }), { status: error.code === 'PGRST116' ? 404 : 500 });
     }
 
     return Response.json(character);
@@ -89,47 +86,38 @@ export async function GET(request: Request, { params }: { params: { id: string }
     return new Response(JSON.stringify({
       error: 'Internal server error',
       message: error instanceof Error ? error.message : 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    }), { status: 500 });
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
-  const id = params.id;
+export async function PUT(request: Request) {
+  const id = extractIdFromUrl(request);
+
+  if (!id) {
+    return new Response(JSON.stringify({ error: 'Missing character ID in URL' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 
   try {
     if (!supabaseAdmin) {
-      console.error('Supabase admin client not initialized - missing SUPABASE_SERVICE_ROLE_KEY');
       return new Response(JSON.stringify({
         error: 'Server configuration error',
         details: 'Supabase admin client not available'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      }), { status: 500 });
     }
 
     const authHeader = request.headers.get('Authorization');
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Invalid authorization header' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return new Response(JSON.stringify({ error: 'Invalid authorization header' }), { status: 401 });
     }
 
     const { user, error: authError } = await validateUserFromToken(authHeader);
 
     if (authError || !user) {
-      return new Response(JSON.stringify({
-        error: 'Authentication failed',
-        details: authError?.message || 'Invalid token'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return new Response(JSON.stringify({ error: 'Authentication failed', details: authError?.message || 'Invalid token' }), { status: 401 });
     }
 
     const body = await request.json();
@@ -146,78 +134,56 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       .select();
 
     if (error) {
-      console.error('Error updating character:', error);
       return new Response(JSON.stringify({
         error: 'Database error',
         message: error.message,
         details: error.details,
         hint: error.hint,
         code: error.code
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      }), { status: 500 });
     }
 
     if (!characters || characters.length === 0) {
-      return new Response(JSON.stringify({
-        error: 'Character not found or you do not have permission to update it'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return new Response(JSON.stringify({ error: 'Character not found or you do not have permission to update it' }), { status: 404 });
     }
 
     return Response.json(characters[0]);
   } catch (error) {
-    console.error('API Error:', error);
     return new Response(JSON.stringify({
       error: 'Internal server error',
       message: error instanceof Error ? error.message : 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    }), { status: 500 });
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-  const id = params.id;
+export async function DELETE(request: Request) {
+  const id = extractIdFromUrl(request);
+
+  if (!id) {
+    return new Response(JSON.stringify({ error: 'Missing character ID in URL' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 
   try {
-    console.log('DELETE request received for character:', id);
-
     if (!supabaseAdmin) {
-      console.error('Supabase admin client not initialized - missing SUPABASE_SERVICE_ROLE_KEY');
       return new Response(JSON.stringify({
         error: 'Server configuration error',
-        details: 'Supabase admin client not available - check environment variables'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+        details: 'Supabase admin client not available'
+      }), { status: 500 });
     }
 
     const authHeader = request.headers.get('Authorization');
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Invalid authorization header' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return new Response(JSON.stringify({ error: 'Invalid authorization header' }), { status: 401 });
     }
 
     const { user, error: authError } = await validateUserFromToken(authHeader);
 
     if (authError || !user) {
-      console.error('Authentication failed:', authError);
-      return new Response(JSON.stringify({
-        error: 'Authentication failed',
-        details: authError?.message || 'Invalid token'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return new Response(JSON.stringify({ error: 'Authentication failed', details: authError?.message || 'Invalid token' }), { status: 401 });
     }
 
     const { data: existingCharacter, error: checkError } = await supabaseAdmin
@@ -228,14 +194,8 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       .single();
 
     if (checkError) {
-      console.error('Error checking character:', checkError);
       if (checkError.code === 'PGRST116') {
-        return new Response(JSON.stringify({
-          error: 'Character not found or you do not have permission to delete it'
-        }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return new Response(JSON.stringify({ error: 'Character not found or no permission to delete it' }), { status: 404 });
       }
 
       return new Response(JSON.stringify({
@@ -243,10 +203,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
         message: checkError.message,
         details: checkError.details || 'No additional details',
         code: checkError.code || 'UNKNOWN'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      }), { status: 500 });
     }
 
     const { error: deleteError } = await supabaseAdmin
@@ -256,48 +213,24 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       .eq('user_id', user.id);
 
     if (deleteError) {
-      console.error('Error deleting character:', deleteError);
       return new Response(JSON.stringify({
         error: 'Database error during deletion',
         message: deleteError.message,
         details: deleteError.details || 'No additional details',
         hint: deleteError.hint || 'No hint available',
         code: deleteError.code || 'UNKNOWN'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      }), { status: 500 });
     }
 
     return new Response(JSON.stringify({
       message: 'Character deleted successfully',
       characterName: existingCharacter.name
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
-
+    }), { status: 200 });
   } catch (error) {
-    console.error('API Error in DELETE:', error);
-
-    if (error instanceof Error && error.message.includes('fetch failed')) {
-      return new Response(JSON.stringify({
-        error: 'Network connection error',
-        message: 'Unable to connect to database. Please check your internet connection and try again.',
-        details: error.message
-      }), {
-        status: 503,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
     return new Response(JSON.stringify({
       error: 'Internal server error',
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    }), { status: 500 });
   }
 }
