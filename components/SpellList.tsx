@@ -103,36 +103,32 @@ export function SpellList({ spells }: SpellListProps) {
       activeOpacity={0.8}
     >
       <View style={styles.spellHeader}>
-        <View style={styles.spellTitleRow}>
-          <View style={[styles.levelBadge, { backgroundColor: getLevelColor(item.level) }]}>
-            <Text style={styles.levelText}>
-              {item.level === 0 ? 'T' : item.level.toString()}
-            </Text>
-          </View>
-          <View style={styles.spellNameContainer}>
+        <View style={[styles.levelBadge, { backgroundColor: getLevelColor(item.level) }]}>
+          <Text style={styles.levelText}>
+            {item.level === 0 ? 'T' : item.level.toString()}
+          </Text>
+        </View>
+        
+        <View style={styles.spellContent}>
+          <View style={styles.spellTitleRow}>
             <Text style={styles.spellName}>{item.name}</Text>
-            <View style={styles.spellMetaRow}>
-              <Text style={styles.levelName}>{getLevelName(item.level)}</Text>
-              <Text style={styles.separator}>•</Text>
-              <View style={[styles.schoolBadge, { backgroundColor: SchoolColors[item.school as keyof typeof SchoolColors] }]}>
-                <Text style={styles.schoolText}>{item.school}</Text>
-              </View>
+            <View style={[styles.schoolBadge, { backgroundColor: SchoolColors[item.school as keyof typeof SchoolColors] }]}>
+              <Text style={styles.schoolText}>{item.school}</Text>
             </View>
           </View>
+          
+          <View style={styles.spellMetaRow}>
+            <Text style={styles.levelName}>{getLevelName(item.level)}</Text>
+            <Text style={styles.separator}>•</Text>
+            <Text style={styles.spellDetails}>{item.castingTime}</Text>
+            <Text style={styles.separator}>•</Text>
+            <Text style={styles.spellDetails}>{item.range}</Text>
+          </View>
+          
+          <Text style={styles.classesText} numberOfLines={1}>
+            {item.classes.join(', ')}
+          </Text>
         </View>
-      </View>
-
-      <View style={styles.spellInfo}>
-        <Text style={styles.spellDetails}>
-          {item.castingTime} • {item.range} • {item.duration}
-        </Text>
-      </View>
-
-      <View style={styles.spellClasses}>
-        <Text style={styles.classesLabel}>Classes:</Text>
-        <Text style={styles.classesText} numberOfLines={2}>
-          {item.classes.join(', ')}
-        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -141,7 +137,7 @@ export function SpellList({ spells }: SpellListProps) {
     <View style={styles.container}>
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
-          <Search size={20} color="#666" />
+          <Search size={18} color="#666" />
           <TextInput
             style={styles.searchInput}
             placeholder="Buscar magias..."
@@ -156,7 +152,7 @@ export function SpellList({ spells }: SpellListProps) {
             onPress={() => setShowClassFilter(true)}
             activeOpacity={0.8}
           >
-            <Filter size={16} color="#666" />
+            <Filter size={14} color="#666" />
             <Text style={styles.classFilterText}>
               {selectedClass || 'Todas as Classes'}
             </Text>
@@ -168,19 +164,14 @@ export function SpellList({ spells }: SpellListProps) {
               onPress={() => setSelectedClass(null)}
               activeOpacity={0.8}
             >
-              <X size={14} color="#E74C3C" />
+              <X size={12} color="#E74C3C" />
             </TouchableOpacity>
           )}
-        </View>
 
-        <View style={styles.totalCountContainer}>
-          <BookOpen size={16} color="#D4AF37" />
-          <Text style={styles.totalCount}>
-            Total: {totalSpells} magias
-            {selectedClass && (
-              <Text style={styles.filterInfo}> • Filtrado por: {selectedClass}</Text>
-            )}
-          </Text>
+          <View style={styles.totalCountContainer}>
+            <BookOpen size={14} color="#D4AF37" />
+            <Text style={styles.totalCount}>{totalSpells}</Text>
+          </View>
         </View>
       </View>
 
@@ -190,7 +181,7 @@ export function SpellList({ spells }: SpellListProps) {
         showsVerticalScrollIndicator={false}
         renderItem={renderSpellItem}
         contentContainerStyle={styles.listContent}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
       />
 
       {/* Class Filter Modal */}
@@ -212,7 +203,7 @@ export function SpellList({ spells }: SpellListProps) {
                 onPress={() => setShowClassFilter(false)}
                 style={styles.modalCloseButton}
               >
-                <X size={20} color="#666" />
+                <X size={18} color="#666" />
               </TouchableOpacity>
             </View>
 
@@ -227,7 +218,7 @@ export function SpellList({ spells }: SpellListProps) {
                 styles.classOptionText,
                 !selectedClass && styles.classOptionTextSelected
               ]}>
-                Todas as Classes ({spells.length} magias)
+                Todas as Classes ({spells.length})
               </Text>
             </TouchableOpacity>
 
@@ -254,7 +245,7 @@ export function SpellList({ spells }: SpellListProps) {
                       styles.classOptionText,
                       selectedClass === item && styles.classOptionTextSelected
                     ]}>
-                      {item} ({spellCount} magias)
+                      {item} ({spellCount})
                     </Text>
                   </TouchableOpacity>
                 );
@@ -280,9 +271,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F7FA',
   },
   searchContainer: {
-    padding: 16,
+    padding: 12,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 2,
+    borderBottomWidth: 1,
     borderBottomColor: '#E8E8E8',
     elevation: 2,
     shadowColor: '#000',
@@ -294,163 +285,151 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 12,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#E8E8E8',
   },
   searchInput: {
     flex: 1,
-    marginLeft: 12,
-    fontSize: 16,
+    marginLeft: 8,
+    fontSize: 14,
     color: '#333',
   },
   filtersRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
     gap: 8,
   },
   classFilterButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F8F9FA',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
     borderWidth: 1,
     borderColor: '#E8E8E8',
     flex: 1,
-    gap: 8,
+    gap: 6,
   },
   classFilterText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#333',
     fontWeight: '500',
     flex: 1,
   },
   clearFilterButton: {
     backgroundColor: '#FFF5F5',
-    borderRadius: 20,
-    padding: 8,
+    borderRadius: 12,
+    padding: 6,
     borderWidth: 1,
     borderColor: '#FECACA',
   },
   totalCountContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    backgroundColor: '#FFF9E6',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    gap: 4,
   },
   totalCount: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 12,
+    color: '#B8941F',
     fontWeight: '600',
   },
-  filterInfo: {
-    fontSize: 12,
-    color: '#999',
-    fontWeight: '400',
-  },
   listContent: {
-    padding: 16,
-    paddingBottom: 24,
+    padding: 8,
+    paddingBottom: 16,
   },
   spellItem: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    elevation: 2,
+    borderRadius: 8,
+    padding: 12,
+    elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    borderLeftWidth: 4,
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+    borderLeftWidth: 3,
     borderLeftColor: '#D4AF37',
-    marginBottom: 12,
+  },
+  itemSeparator: {
+    height: 6,
   },
   spellHeader: {
-    marginBottom: 12,
-  },
-  spellTitleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 10,
   },
   levelBadge: {
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    minWidth: 32,
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    minWidth: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
   levelText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  spellNameContainer: {
+  spellContent: {
     flex: 1,
   },
-  spellName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 6,
-    lineHeight: 22,
-  },
-  spellMetaRow: {
+  spellTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
+    marginBottom: 4,
   },
-  levelName: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '600',
-  },
-  separator: {
-    fontSize: 12,
-    color: '#999',
+  spellName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    flex: 1,
+    marginRight: 8,
   },
   schoolBadge: {
-    borderRadius: 8,
+    borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
   schoolText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  spellInfo: {
-    marginBottom: 12,
+  spellMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  levelName: {
+    fontSize: 11,
+    color: '#666',
+    fontWeight: '600',
+  },
+  separator: {
+    fontSize: 10,
+    color: '#999',
   },
   spellDetails: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#666',
     fontWeight: '500',
   },
-  spellClasses: {
-    flexDirection: 'column',
-    gap: 4,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-    paddingTop: 12,
-  },
-  classesLabel: {
-    fontSize: 12,
-    color: '#888',
-    fontWeight: '600',
-  },
   classesText: {
-    fontSize: 12,
-    color: '#555',
+    fontSize: 11,
+    color: '#888',
     fontWeight: '500',
-    lineHeight: 16,
+    fontStyle: 'italic',
   },
   // Modal styles
   modalOverlay: {
@@ -462,11 +441,11 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 12,
+    padding: 16,
     width: '100%',
-    maxWidth: 400,
-    maxHeight: '80%',
+    maxWidth: 350,
+    maxHeight: '70%',
     elevation: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 5 },
@@ -477,13 +456,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 16,
+    marginBottom: 16,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E8E8E8',
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#333',
   },
@@ -491,16 +470,16 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   classOption: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    marginVertical: 2,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginVertical: 1,
   },
   classOptionSelected: {
     backgroundColor: '#D4AF37',
   },
   classOptionText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#333',
     fontWeight: '500',
   },
