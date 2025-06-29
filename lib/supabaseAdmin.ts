@@ -59,6 +59,8 @@ const enhancedFetch = async (url: string, options: RequestInit = {}) => {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
           'Connection': 'keep-alive',
+          'apikey': supabaseServiceKey,
+          'Authorization': `Bearer ${supabaseServiceKey}`,
           ...options.headers,
         },
       });
@@ -102,6 +104,10 @@ export const supabaseAdmin = createClient<Database>(supabaseUrl, supabaseService
   },
   global: { 
     fetch: enhancedFetch,
+    headers: {
+      'apikey': supabaseServiceKey,
+      'Authorization': `Bearer ${supabaseServiceKey}`,
+    },
   },
   db: {
     schema: 'public'
