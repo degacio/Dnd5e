@@ -17,6 +17,119 @@ interface SpellDetailModalProps {
   onClose: () => void;
 }
 
+// Component to render HTML-formatted text
+function FormattedText({ text, style }: { text: string; style?: any }) {
+  // Parse HTML tags and convert to React Native components
+  const parseHtmlText = (htmlText: string) => {
+    const parts = [];
+    let currentIndex = 0;
+    let keyCounter = 0;
+
+    // Split by <br> tags first to handle line breaks
+    const lines = htmlText.split(/<br\s*\/?>/gi);
+    
+    lines.forEach((line, lineIndex) => {
+      if (lineIndex > 0) {
+        parts.push(<Text key={`br-${keyCounter++}`}>{'\n'}</Text>);
+      }
+
+      // Process each line for bold and italic formatting
+      const processLine = (text: string) => {
+        const segments = [];
+        let remaining = text;
+        let segmentKey = 0;
+
+        while (remaining.length > 0) {
+          // Look for bold text (**text** or <b>text</b> or <strong>text</strong>)
+          const boldMatch = remaining.match(/(\*\*(.+?)\*\*|<b>(.+?)<\/b>|<strong>(.+?)<\/strong>)/i);
+          
+          if (boldMatch) {
+            const beforeBold = remaining.substring(0, boldMatch.index);
+            const boldText = boldMatch[2] || boldMatch[3] || boldMatch[4];
+            
+            // Add text before bold
+            if (beforeBold) {
+              segments.push(
+                <Text key={`text-${segmentKey++}`}>
+                  {processItalic(beforeBold)}
+                </Text>
+              );
+            }
+            
+            // Add bold text
+            segments.push(
+              <Text key={`bold-${segmentKey++}`} style={styles.boldText}>
+                {processItalic(boldText)}
+              </Text>
+            );
+            
+            remaining = remaining.substring(boldMatch.index + boldMatch[0].length);
+          } else {
+            // No more bold text, process remaining for italic
+            segments.push(
+              <Text key={`text-${segmentKey++}`}>
+                {processItalic(remaining)}
+              </Text>
+            );
+            break;
+          }
+        }
+        
+        return segments;
+      };
+
+      // Process italic text (*text* or <i>text</i> or <em>text</em>)
+      const processItalic = (text: string) => {
+        const segments = [];
+        let remaining = text;
+        let segmentKey = 0;
+
+        while (remaining.length > 0) {
+          const italicMatch = remaining.match(/(\*(.+?)\*|<i>(.+?)<\/i>|<em>(.+?)<\/em>)/i);
+          
+          if (italicMatch) {
+            const beforeItalic = remaining.substring(0, italicMatch.index);
+            const italicText = italicMatch[2] || italicMatch[3] || italicMatch[4];
+            
+            // Add text before italic
+            if (beforeItalic) {
+              segments.push(beforeItalic);
+            }
+            
+            // Add italic text
+            segments.push(
+              <Text key={`italic-${segmentKey++}`} style={styles.italicText}>
+                {italicText}
+              </Text>
+            );
+            
+            remaining = remaining.substring(italicMatch.index + italicMatch[0].length);
+          } else {
+            // No more italic text
+            segments.push(remaining);
+            break;
+          }
+        }
+        
+        return segments;
+      };
+
+      const lineSegments = processLine(line);
+      parts.push(...lineSegments);
+    });
+
+    return parts;
+  };
+
+  const formattedContent = parseHtmlText(text);
+
+  return (
+    <Text style={style}>
+      {formattedContent}
+    </Text>
+  );
+}
+
 export function SpellDetailModal({ spell, visible, onClose }: SpellDetailModalProps) {
   if (!spell) return null;
 
@@ -75,7 +188,7 @@ export function SpellDetailModal({ spell, visible, onClose }: SpellDetailModalPr
                 Descrição
               </Text>
             </View>
-            <Text style={styles.description}>{spell.description}</Text>
+            <FormattedText text={spell.description} style={styles.description} />
           </View>
 
           <View style={styles.section}>
@@ -209,6 +322,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     lineHeight: 24,
+  },
+  boldText: {
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  italicText: {
+    fontStyle: 'italic',
+    color: '#444',
   },
   classesContainer: {
     flexDirection: 'row',
