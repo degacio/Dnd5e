@@ -6,8 +6,7 @@
     "hitDie": "d8",
     "primaryAbility": ["Inteligência"],
     "savingThrowProficiencies": ["Constituição", "Inteligência"],
-    "negrito":["Escolha duas entre:\n"],
-    "skillProficiencies": ["Arcanismo", "História", "Investigação", "Medicina", "Natureza", "Percepção", "Prestidigitação"],
+    "skillProficiencies": ["Escolha duas entre:", "Arcanismo", "História", "Investigação", "Medicina", "Natureza", "Percepção", "Prestidigitação"],
     "armorProficiencies": ["Armaduras leves", "Armaduras médias", "Escudos"],
     "weaponProficiencies": ["Armas simples", "Armas de fogo"],
     "toolProficiencies": ["Ferramentas de ladrão", "Kit de ferramentas de artesão", "Ferramentas de alquimista"],
@@ -62,7 +61,7 @@
     "hitDie": "d12",
     "primaryAbility": ["Força"],
     "savingThrowProficiencies": ["Força", "Constituição"],
-    "skillProficiencies": ["Adestrar Animais", "Atletismo", "Intimidação", "Natureza", "Percepção", "Sobrevivência"],
+    "skillProficiencies": ["Escolha duas entre:", "Adestrar Animais", "Atletismo", "Intimidação", "Natureza", "Percepção", "Sobrevivência"],
     "armorProficiencies": ["Armaduras leves", "Armaduras médias", "Escudos"],
     "weaponProficiencies": ["Armas simples", "Armas marciais"],
     "toolProficiencies": [],
@@ -132,6 +131,56 @@
         "level": 2,
         "name": "Canção de Descanso",
         "description": "Você pode usar música ou oração calmante para ajudar a revitalizar seus aliados feridos durante um descanso curto."
+      },
+      {
+        "level": 3,
+        "name": "Colégio de Bardo",
+        "description": "Você se aprofunda nas técnicas avançadas de um colégio de bardo de sua escolha."
+      },
+      {
+        "level": 3,
+        "name": "Aptidão",
+        "description": "Escolha duas de suas proficiências em perícias. Seu bônus de proficiência é dobrado para qualquer teste de habilidade que você fizer que use qualquer uma das proficiências escolhidas."
+      },
+      {
+        "level": 4,
+        "name": "Incremento no Valor de Habilidade",
+        "description": "Você pode aumentar um valor de habilidade à sua escolha em 2 ou você pode aumentar dois valores de habilidade à sua escolha em 1."
+      },
+      {
+        "level": 5,
+        "name": "Fonte de Inspiração",
+        "description": "Você recupera todos os seus usos gastos de Inspiração de Bardo quando termina um descanso curto ou longo."
+      },
+      {
+        "level": 6,
+        "name": "Habilidade de Colégio de Bardo",
+        "description": "Você ganha uma característica do seu Colégio de Bardo."
+      },
+      {
+        "level": 6,
+        "name": "Canção de Proteção",
+        "description": "Você pode usar música ou oração para proteger seus aliados."
+      },
+      {
+        "level": 10,
+        "name": "Segredos Mágicos",
+        "description": "Você aprendeu segredos mágicos de uma ampla gama de disciplinas."
+      },
+      {
+        "level": 14,
+        "name": "Habilidade de Colégio de Bardo",
+        "description": "Você ganha uma característica adicional do seu Colégio de Bardo."
+      },
+      {
+        "level": 18,
+        "name": "Inspiração Superior",
+        "description": "Você alcançou tamanha maestria em sua arte que pode inspirar outros com maior eficácia."
+      },
+      {
+        "level": 20,
+        "name": "Inspiração Superior",
+        "description": "Quando você rola iniciativa e não tem nenhum uso de Inspiração de Bardo restante, você recupera um uso."
       }
     ],
     "spellcasting": {
@@ -161,7 +210,7 @@
     "hitDie": "d8",
     "primaryAbility": ["Sabedoria"],
     "savingThrowProficiencies": ["Sabedoria", "Carisma"],
-    "skillProficiencies": ["História", "Intuição", "Medicina", "Persuasão", "Religião"],
+    "skillProficiencies": ["Escolha duas entre:", "História", "Intuição", "Medicina", "Persuasão", "Religião"],
     "armorProficiencies": ["Armaduras leves", "Armaduras médias", "Escudos"],
     "weaponProficiencies": ["Armas simples"],
     "toolProficiencies": [],
@@ -220,7 +269,7 @@
     "hitDie": "d8",
     "primaryAbility": ["Sabedoria"],
     "savingThrowProficiencies": ["Inteligência", "Sabedoria"],
-    "skillProficiencies": ["Adestrar Animais", "Arcanismo", "Intuição", "Medicina", "Natureza", "Percepção", "Religião", "Sobrevivência"],
+    "skillProficiencies": ["Escolha duas entre:", "Adestrar Animais", "Arcanismo", "Intuição", "Medicina", "Natureza", "Percepção", "Religião", "Sobrevivência"],
     "armorProficiencies": ["Armaduras leves", "Armaduras médias", "Escudos (não-metálicos)"],
     "weaponProficiencies": ["Clavas", "Adagas", "Dardos", "Azagaias", "Maças", "Bordões", "Cimitarras", "Foices", "Fundas", "Lanças"],
     "toolProficiencies": ["Kit de herbalismo"],
@@ -277,7 +326,7 @@
     "hitDie": "d10",
     "primaryAbility": ["Força", "Destreza"],
     "savingThrowProficiencies": ["Força", "Constituição"],
-    "skillProficiencies": ["Acrobacia", "Adestrar Animais", "Atletismo", "História", "Intuição", "Intimidação", "Percepção", "Sobrevivência"],
+    "skillProficiencies": ["Escolha duas entre:", "Acrobacia", "Adestrar Animais", "Atletismo", "História", "Intuição", "Intimidação", "Percepção", "Sobrevivência"],
     "armorProficiencies": ["Todas as armaduras", "Escudos"],
     "weaponProficiencies": ["Armas simples", "Armas marciais"],
     "toolProficiencies": [],
@@ -352,7 +401,7 @@
     "hitDie": "d8",
     "primaryAbility": ["Destreza", "Sabedoria"],
     "savingThrowProficiencies": ["Força", "Destreza"],
-    "skillProficiencies": ["Acrobacia", "Atletismo", "Furtividade", "História", "Intuição", "Religião"],
+    "skillProficiencies": ["Escolha duas entre:", "Acrobacia", "Atletismo", "Furtividade", "História", "Intuição", "Religião"],
     "armorProficiencies": [],
     "weaponProficiencies": ["Armas simples", "Espadas curtas"],
     "toolProficiencies": ["Um tipo de ferramenta de artesão ou um instrumento musical"],
@@ -392,7 +441,7 @@
     "hitDie": "d10",
     "primaryAbility": ["Força", "Carisma"],
     "savingThrowProficiencies": ["Sabedoria", "Carisma"],
-    "skillProficiencies": ["Atletismo", "Intuição", "Intimidação", "Medicina", "Persuasão", "Religião"],
+    "skillProficiencies": ["Escolha duas entre:", "Atletismo", "Intuição", "Intimidação", "Medicina", "Persuasão", "Religião"],
     "armorProficiencies": ["Todas as armaduras", "Escudos"],
     "weaponProficiencies": ["Armas simples", "Armas marciais"],
     "toolProficiencies": [],
@@ -444,7 +493,7 @@
     "hitDie": "d10",
     "primaryAbility": ["Destreza", "Sabedoria"],
     "savingThrowProficiencies": ["Força", "Destreza"],
-    "skillProficiencies": ["Adestrar Animais", "Atletismo", "Furtividade", "Intuição", "Investigação", "Natureza", "Percepção", "Sobrevivência"],
+    "skillProficiencies": ["Escolha três entre:", "Adestrar Animais", "Atletismo", "Furtividade", "Intuição", "Investigação", "Natureza", "Percepção", "Sobrevivência"],
     "armorProficiencies": ["Armaduras leves", "Armaduras médias", "Escudos"],
     "weaponProficiencies": ["Armas simples", "Armas marciais"],
     "toolProficiencies": [],
@@ -498,7 +547,7 @@
     "hitDie": "d8",
     "primaryAbility": ["Destreza"],
     "savingThrowProficiencies": ["Destreza", "Inteligência"],
-    "skillProficiencies": ["Acrobacia", "Atletismo", "Atuação", "Enganação", "Furtividade", "Intimidação", "Intuição", "Investigação", "Percepção", "Persuasão", "Prestidigitação", "Sobrevivência"],
+    "skillProficiencies": ["Escolha quatro entre:", "Acrobacia", "Atletismo", "Atuação", "Enganação", "Furtividade", "Intimidação", "Intuição", "Investigação", "Percepção", "Persuasão", "Prestidigitação", "Sobrevivência"],
     "armorProficiencies": ["Armaduras leves"],
     "weaponProficiencies": ["Armas simples", "Bestas de mão", "Espadas longas", "Rapieiras", "Espadas curtas"],
     "toolProficiencies": ["Ferramentas de ladrão"],
@@ -573,7 +622,7 @@
     "hitDie": "d6",
     "primaryAbility": ["Carisma"],
     "savingThrowProficiencies": ["Constituição", "Carisma"],
-    "skillProficiencies": ["Arcanismo", "Enganação", "Intimidação", "Intuição", "Persuasão", "Religião"],
+    "skillProficiencies": ["Escolha duas entre:", "Arcanismo", "Enganação", "Intimidação", "Intuição", "Persuasão", "Religião"],
     "armorProficiencies": [],
     "weaponProficiencies": ["Adagas", "Dardos", "Fundas", "Bordões", "Bestas leves"],
     "toolProficiencies": [],
@@ -631,7 +680,7 @@
     "hitDie": "d8",
     "primaryAbility": ["Carisma"],
     "savingThrowProficiencies": ["Sabedoria", "Carisma"],
-    "skillProficiencies": ["Arcanismo", "Enganação", "História", "Intimidação", "Investigação", "Natureza", "Religião"],
+    "skillProficiencies": ["Escolha duas entre:", "Arcanismo", "Enganação", "História", "Intimidação", "Investigação", "Natureza", "Religião"],
     "armorProficiencies": ["Armaduras leves"],
     "weaponProficiencies": ["Armas simples"],
     "toolProficiencies": [],
@@ -685,7 +734,7 @@
     "hitDie": "d6",
     "primaryAbility": ["Inteligência"],
     "savingThrowProficiencies": ["Inteligência", "Sabedoria"],
-    "skillProficiencies": ["Arcanismo", "História", "Intuição", "Investigação", "Medicina", "Religião"],
+    "skillProficiencies": ["Escolha duas entre:", "Arcanismo", "História", "Intuição", "Investigação", "Medicina", "Religião"],
     "armorProficiencies": [],
     "weaponProficiencies": ["Adagas", "Dardos", "Fundas", "Bordões", "Bestas leves"],
     "toolProficiencies": [],
