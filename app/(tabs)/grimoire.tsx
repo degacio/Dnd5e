@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
   Modal,
+  Platform,
 } from 'react-native';
 import { Character } from '@/types/database';
 import { Spell } from '@/types/spell';
@@ -34,7 +35,9 @@ import {
   Eye,
   EyeOff,
   Copy,
-  Clock
+  Clock,
+  Check,
+  ChevronDown
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import classesData from '@/data/classes.json';
@@ -59,6 +62,14 @@ interface SpellDetailModalProps {
   onClose: () => void;
 }
 
+interface SpellSelectionModalProps {
+  visible: boolean;
+  onClose: () => void;
+  characterClass: DnDClass;
+  characterName: string;
+  onAddSpells: (spells: Spell[]) => void;
+}
+
 // Component to render HTML-formatted text
 function FormattedText({ text, style }: { text: string; style?: any }) {
   // Parse HTML tags and convert to React Native components
@@ -71,10 +82,10 @@ function FormattedText({ text, style }: { text: string; style?: any }) {
       .replace(/&emsp;/g, '    ') // Em space (4 spaces)
       .replace(/&ensp;/g, '  ')  // En space (2 spaces)
       .replace(/&nbsp;/g, ' ')   // Non-breaking space
-      .replace(/&amp;/g, '&')    // Ampersand
-      .replace(/&lt;/g, '<')     // Less than
-      .replace(/&gt;/g, '>')     // Greater than
-      .replace(/&quot;/g, '"')   // Quote
+      .replace(/&/g, '&')    // Ampersand
+      .replace(/</g, '<')     // Less than
+      .replace(/>/g, '>')     // Greater than
+      .replace(/"/g, '"')   // Quote
       .replace(/&#39;/g, "'")    // Apostrophe
       .replace(/&apos;/g, "'");  // Apostrophe (alternative)
 
@@ -285,10 +296,366 @@ function SpellDetailModal({ spell, visible, onClose }: SpellDetailModalProps) {
   );
 }
 
+// Spell Selection Modal Component
+function SpellSelectionModal({ 
+  visible, 
+  onClose, 
+  characterClass, 
+  characterName, 
+  onAddSpells 
+}: SpellSelectionModalProps) {
+  const [selectedSpells, setSelectedSpells] = useState<Set<string>>(new Set());
+  const [selectedSpell, setSelectedSpell] = useState<Spell | null>(null);
+  const [expandedSchools, setExpandedSchools] = useState<Set<string>>(new Set());
+  const [allSpells, setAllSpells] = useState<Spell[]>([]);
+
+  useEffect(() => {
+    if (visible) {
+      loadSpells();
+    }
+  }, [visible]);
+
+  const loadSpells = async () => {
+    try {
+      // Load spells data
+      let spellsData: Spell[] = [];
+      
+      if (Platform.OS === 'web') {
+        const storedSpells = localStorage.getItem('customSpells');
+        if (storedSpells) {
+          spellsData = JSON.parse(storedSpells);
+        }
+      }
+      
+      // If no custom spells, load the default ones
+      if (spellsData.length === 0) {
+        const defaultSpells = require('@/data/spells.json');
+        
+        // Check if we have the Livro do Jogador data
+        try {
+          const livroDoJogadorData = require('@/data/magias-livro-do-jogador.json');
+          const { adaptSpellsFromLivroDoJogador } = require('@/utils/spellAdapter');
+          const adaptedSpells = adaptSpellsFromLivroDoJogador(livroDoJogadorData);
+          
+          if (adaptedSpells && adaptedSpells.length > 0) {
+            spellsData = adaptedSpells;
+          } else {
+            spellsData = defaultSpells;
+          }
+        } catch (error) {
+          spellsData = defaultSpells;
+        }
+      }
+      
+      setAllSpells(spellsData);
+    } catch (error) {
+      console.error('Error loading spells:', error);
+      setAllSpells([]);
+    }
+  };
+
+  const classSpells = React.useMemo(() => {
+    if (!characterClass || !characterClass.name) {
+      return [];
+    }
+
+    // Filter spells for this class
+    const filteredSpells = allSpells.filter((spell: Spell) => {
+      // Check if spell is available to this class
+      const isClassSpell = spell.classes && Array.isArray(spell.classes) && 
+        spell.classes.some(className => 
+          className && className.trim().toLowerCase() === characterClass.name.toLowerCase()
+        );
+      
+      // Check if spell is available to any subclass of this class
+      const isSubclassSpell = spell.subclasses && Array.isArray(spell.subclasses) && 
+        characterClass.subclasses && Array.isArray(characterClass.subclasses) &&
+        spell.subclasses.some(subclass => 
+          characterClass.subclasses.some(classSubclass => 
+            typeof classSubclass === 'string' 
+              ? classSubclass.toLowerCase() === subclass.toLowerCase()
+              : classSubclass && classSubclass.name && classSubclass.name.toLowerCase() === subclass.toLowerCase()
+          )
+        );
+      
+      return isClassSpell || isSubclassSpell;
+    });
+    
+    return filteredSpells;
+  }, [characterClass, allSpells]);
+
+  const spellsBySchool = React.useMemo(() => {
+    const groups: Record<string, Spell[]> = {};
+    
+    classSpells.forEach((spell) => {
+      if (!groups[spell.school]) {
+        groups[spell.school] = [];
+      }
+      groups[spell.school].push(spell);
+    });
+
+    // Sort spells within each school
+    Object.keys(groups).forEach(school => {
+      groups[school].sort((a, b) => {
+        if (a.level !== b.level) return a.level - b.level;
+        return a.name.localeCompare(b.name);
+      });
+    });
+
+    return groups;
+  }, [classSpells]);
+
+  const toggleSpellSelection = (spellId: string) => {
+    const newSelected = new Set(selectedSpells);
+    if (newSelected.has(spellId)) {
+      newSelected.delete(spellId);
+    } else {
+      newSelected.add(spellId);
+    }
+    setSelectedSpells(newSelected);
+  };
+
+  const toggleSchool = (school: string) => {
+    const newExpanded = new Set(expandedSchools);
+    if (newExpanded.has(school)) {
+      newExpanded.delete(school);
+    } else {
+      newExpanded.add(school);
+    }
+    setExpandedSchools(newExpanded);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedSpells.size === classSpells.length) {
+      setSelectedSpells(new Set());
+    } else {
+      setSelectedSpells(new Set(classSpells.map(spell => spell.id)));
+    }
+  };
+
+  const handleAddSelectedSpells = () => {
+    if (selectedSpells.size === 0) {
+      const message = 'Selecione pelo menos uma magia para adicionar ao grimório.';
+      if (Platform.OS === 'web') {
+        alert(`Aviso: ${message}`);
+      } else {
+        Alert.alert('Aviso', message);
+      }
+      return;
+    }
+
+    const spellsToAdd = classSpells.filter(spell => selectedSpells.has(spell.id));
+    const confirmMessage = `Adicionar ${spellsToAdd.length} magia(s) ao grimório de ${characterName}?`;
+    
+    const performAdd = () => {
+      onAddSpells(spellsToAdd);
+      handleClose();
+    };
+
+    if (Platform.OS === 'web') {
+      if (confirm(`Confirmar: ${confirmMessage}`)) {
+        performAdd();
+      }
+    } else {
+      Alert.alert(
+        'Confirmar',
+        confirmMessage,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Adicionar', onPress: performAdd }
+        ]
+      );
+    }
+  };
+
+  const handleClose = () => {
+    setSelectedSpells(new Set());
+    setSelectedSpell(null);
+    setExpandedSchools(new Set());
+    onClose();
+  };
+
+  const getSchoolColor = (school: string): string => {
+    const schoolColors: Record<string, string> = {
+      'Abjuração': '#4A90E2',
+      'Adivinhação': '#9B59B6',
+      'Encantamento': '#E74C3C',
+      'Evocação': '#F39C12',
+      'Ilusão': '#8E44AD',
+      'Invocação': '#27AE60',
+      'Necromancia': '#2C3E50',
+      'Transmutação': '#16A085'
+    };
+    return schoolColors[school] || '#666';
+  };
+
+  return (
+    <>
+      <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.spellSelectionHeader}>
+            <View style={styles.spellSelectionHeaderContent}>
+              <View style={styles.spellSelectionTitleSection}>
+                <Text style={styles.spellSelectionTitle}>Adicionar Magias</Text>
+                <Text style={styles.spellSelectionSubtitle}>
+                  {characterName} • {characterClass?.name || 'Classe não definida'}
+                </Text>
+              </View>
+              <TouchableOpacity style={styles.spellSelectionCloseButton} onPress={handleClose}>
+                <X size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Selection Controls */}
+          <View style={styles.selectionControls}>
+            <View style={styles.selectionHeader}>
+              <BookOpen size={20} color="#8E44AD" />
+              <Text style={styles.selectionTitle}>
+                Magias Disponíveis: {classSpells.length} ({selectedSpells.size} selecionadas)
+              </Text>
+            </View>
+            
+            {classSpells.length > 0 && (
+              <View style={styles.selectionButtons}>
+                <TouchableOpacity
+                  style={styles.selectAllButton}
+                  onPress={handleSelectAll}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.selectAllButtonText}>
+                    {selectedSpells.size === classSpells.length ? 'Desmarcar Todas' : 'Selecionar Todas'}
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[
+                    styles.confirmButton,
+                    selectedSpells.size === 0 && styles.confirmButtonDisabled
+                  ]}
+                  onPress={handleAddSelectedSpells}
+                  activeOpacity={0.8}
+                  disabled={selectedSpells.size === 0}
+                >
+                  <Check size={16} color="#FFFFFF" />
+                  <Text style={styles.confirmButtonText}>
+                    Adicionar ({selectedSpells.size})
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          <ScrollView style={styles.spellSelectionContent} showsVerticalScrollIndicator={false}>
+            {/* Spells by School */}
+            {Object.keys(spellsBySchool).length > 0 ? (
+              <View style={styles.spellsContainer}>
+                {Object.entries(spellsBySchool)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([school, spells]) => {
+                    const schoolColor = getSchoolColor(school);
+                    const isExpanded = expandedSchools.has(school);
+                    
+                    return (
+                      <View key={school} style={styles.schoolContainer}>
+                        <TouchableOpacity
+                          style={[styles.schoolHeader, { backgroundColor: schoolColor }]}
+                          onPress={() => toggleSchool(school)}
+                          activeOpacity={0.8}
+                        >
+                          <View style={styles.schoolHeaderContent}>
+                            <View style={styles.schoolTitleContainer}>
+                              {isExpanded ? (
+                                <ChevronDown size={20} color="#FFFFFF" />
+                              ) : (
+                                <ChevronRight size={20} color="#FFFFFF" />
+                              )}
+                              <Text style={styles.schoolTitle}>
+                                {school}
+                              </Text>
+                            </View>
+                            <View style={styles.countBadge}>
+                              <Text style={styles.countText}>{spells.length}</Text>
+                            </View>
+                          </View>
+                        </TouchableOpacity>
+
+                        {isExpanded && (
+                          <View style={styles.schoolSpellsContainer}>
+                            {spells.map((spell) => (
+                              <View key={spell.id} style={styles.spellCardContainer}>
+                                <TouchableOpacity
+                                  style={[
+                                    styles.spellCheckbox,
+                                    selectedSpells.has(spell.id) && styles.spellCheckboxSelected
+                                  ]}
+                                  onPress={() => toggleSpellSelection(spell.id)}
+                                  activeOpacity={0.8}
+                                >
+                                  {selectedSpells.has(spell.id) && (
+                                    <Check size={16} color="#FFFFFF" />
+                                  )}
+                                </TouchableOpacity>
+                                
+                                <TouchableOpacity
+                                  style={styles.spellCardWrapper}
+                                  onPress={() => setSelectedSpell(spell)}
+                                  activeOpacity={0.8}
+                                >
+                                  <View style={styles.spellCard}>
+                                    <View style={styles.spellCardHeader}>
+                                      <View style={[styles.spellLevelBadge, { backgroundColor: getSchoolColor(spell.school) }]}>
+                                        <Text style={styles.spellLevelBadgeText}>
+                                          {spell.level === 0 ? 'T' : spell.level}
+                                        </Text>
+                                      </View>
+                                      <View style={styles.spellCardInfo}>
+                                        <Text style={styles.spellCardName}>{spell.name}</Text>
+                                        <Text style={styles.spellCardSchool}>{spell.school}</Text>
+                                      </View>
+                                    </View>
+                                    <View style={styles.spellCardMeta}>
+                                      <Text style={styles.spellCardMetaText}>{spell.castingTime}</Text>
+                                      <Text style={styles.spellCardMetaText}>•</Text>
+                                      <Text style={styles.spellCardMetaText}>{spell.range}</Text>
+                                    </View>
+                                  </View>
+                                </TouchableOpacity>
+                              </View>
+                            ))}
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
+              </View>
+            ) : (
+              <View style={styles.noSpellsContainer}>
+                <Sparkles size={48} color="#D4AF37" />
+                <Text style={styles.noSpellsTitle}>Nenhuma Magia Disponível</Text>
+                <Text style={styles.noSpellsText}>
+                  Não foram encontradas magias para a classe {characterClass?.name || 'não definida'}.
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      <SpellDetailModal
+        spell={selectedSpell}
+        visible={!!selectedSpell}
+        onClose={() => setSelectedSpell(null)}
+      />
+    </>
+  );
+}
+
 export default function GrimoireTab() {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [selectedCharacter, setSelectedCharacter] = useState<CharacterSpells | null>(null);
   const [selectedSpell, setSelectedSpell] = useState<Spell | null>(null);
+  const [spellSelectionCharacter, setSpellSelectionCharacter] = useState<Character | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [allSpells, setAllSpells] = useState<Spell[]>([]);
@@ -414,6 +781,92 @@ export default function GrimoireTab() {
   const handleCharacterPress = (character: Character) => {
     const characterSpells = prepareCharacterSpells(character);
     setSelectedCharacter(characterSpells);
+  };
+
+  const openSpellSelection = (character: Character) => {
+    setSpellSelectionCharacter(character);
+  };
+
+  const handleAddSpellsToGrimoire = async (spells: Spell[]) => {
+    if (!spellSelectionCharacter) {
+      Alert.alert('Erro', 'Nenhum personagem selecionado.');
+      return;
+    }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        Alert.alert('Erro', 'Você precisa estar autenticado.');
+        return;
+      }
+
+      // Get current spells known
+      const currentSpells = spellSelectionCharacter.spells_known || [];
+      
+      // Convert current spells to consistent format
+      const currentSpellNames = currentSpells.map((spell: any) => 
+        typeof spell === 'string' ? spell : spell.name
+      );
+
+      // Filter out spells that are already known
+      const newSpells = spells.filter(spell => 
+        !currentSpellNames.includes(spell.name)
+      );
+
+      if (newSpells.length === 0) {
+        Alert.alert('Aviso', 'Todas as magias selecionadas já estão no grimório do personagem.');
+        return;
+      }
+
+      // Convert new spells to the format expected by the database
+      const spellsToAdd = newSpells.map(spell => ({
+        name: spell.name,
+        level: spell.level
+      }));
+
+      // Combine current spells with new spells
+      const updatedSpells = [...currentSpells, ...spellsToAdd];
+
+      // Update character
+      const response = await fetch(`/api/characters/${spellSelectionCharacter.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          spells_known: updatedSpells,
+        }),
+      });
+
+      if (response.ok) {
+        const updatedCharacter = await response.json();
+        
+        // Update local state
+        setCharacters(prev => prev.map(char => 
+          char.id === spellSelectionCharacter.id ? updatedCharacter : char
+        ));
+        
+        // Update selected character if it's the same one
+        if (selectedCharacter?.character.id === spellSelectionCharacter.id) {
+          const updatedCharacterSpells = prepareCharacterSpells(updatedCharacter);
+          setSelectedCharacter(updatedCharacterSpells);
+        }
+        
+        Alert.alert(
+          'Sucesso', 
+          `${newSpells.length} magia(s) adicionada(s) ao grimório de ${spellSelectionCharacter.name}!`
+        );
+      } else {
+        const errorText = await response.text();
+        console.error('Error updating character:', errorText);
+        Alert.alert('Erro', 'Não foi possível adicionar as magias ao grimório.');
+      }
+    } catch (error) {
+      console.error('Error adding spells to grimoire:', error);
+      Alert.alert('Erro', 'Erro ao adicionar magias ao grimório.');
+    }
   };
 
   const updateSpellSlot = async (level: number, type: 'current' | 'max', delta: number) => {
@@ -663,56 +1116,67 @@ export default function GrimoireTab() {
               };
               
               return (
-                <TouchableOpacity
-                  key={character.id}
-                  style={styles.characterCard}
-                  onPress={() => handleCharacterPress(character)}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.characterHeader}>
-                    <View style={styles.characterInfo}>
-                      <User size={24} color="#D4AF37" />
-                      <View style={styles.characterDetails}>
-                        <Text style={styles.characterName}>{character.name}</Text>
-                        <Text style={styles.characterClass}>
-                          {character.class_name} • Nível {character.level}
+                <View key={character.id} style={styles.characterCardWrapper}>
+                  <TouchableOpacity
+                    style={styles.characterCard}
+                    onPress={() => handleCharacterPress(character)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.characterHeader}>
+                      <View style={styles.characterInfo}>
+                        <User size={24} color="#D4AF37" />
+                        <View style={styles.characterDetails}>
+                          <Text style={styles.characterName}>{character.name}</Text>
+                          <Text style={styles.characterClass}>
+                            {character.class_name} • Nível {character.level}
+                          </Text>
+                        </View>
+                      </View>
+                      <ChevronRight size={20} color="#666" />
+                    </View>
+
+                    <View style={styles.characterStats}>
+                      <View style={styles.statItem}>
+                        <Heart size={16} color={getHpColor(hpPercentage)} />
+                        <Text style={styles.statLabel}>Vida</Text>
+                        <Text style={[styles.statValue, { color: getHpColor(hpPercentage) }]}>
+                          {character.hp_current}/{character.hp_max}
                         </Text>
                       </View>
-                    </View>
-                    <ChevronRight size={20} color="#666" />
-                  </View>
-
-                  <View style={styles.characterStats}>
-                    <View style={styles.statItem}>
-                      <Heart size={16} color={getHpColor(hpPercentage)} />
-                      <Text style={styles.statLabel}>Vida</Text>
-                      <Text style={[styles.statValue, { color: getHpColor(hpPercentage) }]}>
-                        {character.hp_current}/{character.hp_max}
-                      </Text>
-                    </View>
-                    
-                    <View style={styles.statItem}>
-                      <Sparkles size={16} color="#8E44AD" />
-                      <Text style={styles.statLabel}>Magias</Text>
-                      <Text style={styles.statValue}>{spellCount}</Text>
-                    </View>
-                    
-                    {totalSlots > 0 && (
+                      
                       <View style={styles.statItem}>
-                        <Zap size={16} color="#E74C3C" />
-                        <Text style={styles.statLabel}>Espaços</Text>
-                        <Text style={styles.statValue}>{totalSlots}</Text>
+                        <Sparkles size={16} color="#8E44AD" />
+                        <Text style={styles.statLabel}>Magias</Text>
+                        <Text style={styles.statValue}>{spellCount}</Text>
+                      </View>
+                      
+                      {totalSlots > 0 && (
+                        <View style={styles.statItem}>
+                          <Zap size={16} color="#E74C3C" />
+                          <Text style={styles.statLabel}>Espaços</Text>
+                          <Text style={styles.statValue}>{totalSlots}</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {character.share_token && (
+                      <View style={styles.sharedIndicator}>
+                        <Share2 size={12} color="#27AE60" />
+                        <Text style={styles.sharedText}>Compartilhado com DM</Text>
                       </View>
                     )}
-                  </View>
+                  </TouchableOpacity>
 
-                  {character.share_token && (
-                    <View style={styles.sharedIndicator}>
-                      <Share2 size={12} color="#27AE60" />
-                      <Text style={styles.sharedText}>Compartilhado com DM</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
+                  {/* Add Spells Button */}
+                  <TouchableOpacity
+                    style={styles.addSpellsButton}
+                    onPress={() => openSpellSelection(character)}
+                    activeOpacity={0.8}
+                  >
+                    <BookOpen size={16} color="#8E44AD" />
+                    <Text style={styles.addSpellsButtonText}>Adicionar Magias ao Grimório</Text>
+                  </TouchableOpacity>
+                </View>
               );
             })}
           </View>
@@ -982,6 +1446,14 @@ export default function GrimoireTab() {
         visible={!!selectedSpell}
         onClose={() => setSelectedSpell(null)}
       />
+
+      <SpellSelectionModal
+        visible={!!spellSelectionCharacter}
+        onClose={() => setSpellSelectionCharacter(null)}
+        characterClass={spellSelectionCharacter ? classesData.find(cls => cls.name === spellSelectionCharacter.class_name)! : {} as any}
+        characterName={spellSelectionCharacter?.name || ''}
+        onAddSpells={handleAddSpellsToGrimoire}
+      />
     </SafeAreaView>
   );
 }
@@ -1041,11 +1513,13 @@ const styles = StyleSheet.create({
   charactersContainer: {
     padding: 16,
   },
+  characterCardWrapper: {
+    marginBottom: 8,
+  },
   characterCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1117,6 +1591,31 @@ const styles = StyleSheet.create({
     color: '#27AE60',
     fontWeight: '600',
     marginLeft: 4,
+  },
+  addSpellsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3E8FF',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginTop: -8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E0B3FF',
+    gap: 8,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  addSpellsButtonText: {
+    color: '#8E44AD',
+    fontSize: 14,
+    fontWeight: '600',
   },
   emptyContainer: {
     flex: 1,
@@ -1590,5 +2089,227 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     fontWeight: '500',
+  },
+  // Spell Selection Modal styles
+  spellSelectionHeader: {
+    backgroundColor: '#8E44AD',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+  },
+  spellSelectionHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  spellSelectionTitleSection: {
+    flex: 1,
+  },
+  spellSelectionTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  spellSelectionSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  spellSelectionCloseButton: {
+    padding: 4,
+  },
+  selectionControls: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E8E8',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  selectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  selectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginLeft: 8,
+    flex: 1,
+  },
+  selectionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  selectAllButton: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+    borderWidth: 2,
+    borderColor: '#D4AF37',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  selectAllButtonText: {
+    color: '#D4AF37',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  confirmButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#27AE60',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 6,
+  },
+  confirmButtonDisabled: {
+    backgroundColor: '#BDC3C7',
+  },
+  confirmButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  spellSelectionContent: {
+    flex: 1,
+  },
+  spellsContainer: {
+    padding: 16,
+  },
+  schoolContainer: {
+    marginBottom: 16,
+  },
+  schoolHeader: {
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  schoolHeaderContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  schoolTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  schoolTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginLeft: 8,
+  },
+  countBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  countText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  schoolSpellsContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginTop: 8,
+    padding: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  spellCardContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  spellCheckbox: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+  },
+  spellCheckboxSelected: {
+    backgroundColor: '#27AE60',
+    borderColor: '#27AE60',
+  },
+  spellCardWrapper: {
+    flex: 1,
+  },
+  spellCard: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    padding: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#D4AF37',
+  },
+  spellCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  spellLevelBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    minWidth: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  spellLevelBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  spellCardInfo: {
+    flex: 1,
+  },
+  spellCardName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  spellCardSchool: {
+    fontSize: 11,
+    color: '#8E44AD',
+    fontWeight: '500',
+  },
+  spellCardMeta: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  spellCardMetaText: {
+    fontSize: 11,
+    color: '#666',
   },
 });
