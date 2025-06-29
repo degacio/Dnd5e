@@ -16,6 +16,8 @@ import { DnDClass } from '@/types/dndClass';
 import { CharacterCard } from '@/components/CharacterCard';
 import { CharacterDetailModal } from '@/components/CharacterDetailModal';
 import { SpellSelectionModal } from '@/components/SpellSelectionModal';
+import { ClassCard } from '@/components/ClassCard';
+import { ClassDetailModal } from '@/components/ClassDetailModal';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import { 
@@ -55,17 +57,20 @@ interface CharacterSpells {
   characterClass: DnDClass | null;
 }
 
+type ViewMode = 'list' | 'character-detail' | 'classes' | 'class-detail';
+
 export default function CharactersTab() {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
   const [selectedCharacterSpells, setSelectedCharacterSpells] = useState<CharacterSpells | null>(null);
+  const [selectedClass, setSelectedClass] = useState<DnDClass | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [allSpells, setAllSpells] = useState<Spell[]>([]);
   const [showAddSpellsModal, setShowAddSpellsModal] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [deletingCharacter, setDeletingCharacter] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'character-detail'>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   useEffect(() => {
     loadData();
@@ -185,9 +190,20 @@ export default function CharactersTab() {
     setViewMode('character-detail');
   };
 
+  const handleClassPress = (dndClass: DnDClass) => {
+    setSelectedClass(dndClass);
+    setViewMode('class-detail');
+  };
+
   const handleBackToList = () => {
     setSelectedCharacterSpells(null);
+    setSelectedClass(null);
     setViewMode('list');
+  };
+
+  const handleBackToClasses = () => {
+    setSelectedClass(null);
+    setViewMode('classes');
   };
 
   const updateSpellSlot = async (level: number, type: 'current' | 'max', delta: number) => {
@@ -527,7 +543,34 @@ export default function CharactersTab() {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <Users size={48} color="#D4AF37" />
-        <Text style={styles.loadingText}>Carregando personagens...</Text>
+        <Text style={styles.loadingText}>Carregando...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  // Class Detail View
+  if (viewMode === 'class-detail' && selectedClass) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.detailHeader}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={handleBackToClasses}
+          >
+            <ArrowLeft size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          
+          <View style={styles.detailHeaderContent}>
+            <Text style={styles.detailTitle}>{selectedClass.name}</Text>
+            <Text style={styles.detailSubtitle}>Classe de D&D 5ª Edição</Text>
+          </View>
+        </View>
+
+        <ClassDetailModal
+          dndClass={selectedClass}
+          visible={true}
+          onClose={handleBackToClasses}
+        />
       </SafeAreaView>
     );
   }
@@ -809,7 +852,43 @@ export default function CharactersTab() {
     );
   }
 
-  // Characters List View
+  // Classes List View
+  if (viewMode === 'classes') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={handleBackToList}
+          >
+            <ArrowLeft size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          
+          <View style={styles.titleContainer}>
+            <Shield size={28} color="#D4AF37" />
+            <Text style={styles.title}>Classes</Text>
+          </View>
+          <Text style={styles.subtitle}>
+            Explore as classes de D&D 5ª Edição
+          </Text>
+        </View>
+
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.classesContainer}>
+            {classesData.map((dndClass) => (
+              <ClassCard
+                key={dndClass.id}
+                dndClass={dndClass}
+                onPress={() => handleClassPress(dndClass)}
+              />
+            ))}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // Main List View with Navigation Options
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -818,7 +897,7 @@ export default function CharactersTab() {
           <Text style={styles.title}>Personagens</Text>
         </View>
         <Text style={styles.subtitle}>
-          Gerencie seus personagens e grimórios
+          Gerencie seus personagens e explore classes
         </Text>
         
         <TouchableOpacity 
@@ -831,6 +910,18 @@ export default function CharactersTab() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Navigation Options */}
+        <View style={styles.navigationContainer}>
+          <TouchableOpacity 
+            style={styles.navButton}
+            onPress={() => setViewMode('classes')}
+          >
+            <Shield size={24} color="#FFFFFF" />
+            <Text style={styles.navButtonText}>Explorar Classes</Text>
+            <Text style={styles.navButtonSubtext}>Veja todas as classes de D&D</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.createButtonContainer}>
           <TouchableOpacity 
             style={styles.createButton}
@@ -927,8 +1018,35 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  createButtonContainer: {
+  navigationContainer: {
     padding: 16,
+  },
+  navButton: {
+    backgroundColor: '#8E44AD',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  navButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 8,
+  },
+  navButtonSubtext: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  createButtonContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   createButton: {
     flexDirection: 'row',
@@ -953,6 +1071,9 @@ const styles = StyleSheet.create({
   charactersContainer: {
     paddingHorizontal: 16,
     paddingBottom: 16,
+  },
+  classesContainer: {
+    padding: 16,
   },
   emptyContainer: {
     flex: 1,
