@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { BookOpen, Eye, Settings, Users } from 'lucide-react-native';
+import { BookOpen, Eye, Settings, Users, TestTube } from 'lucide-react-native';
 import { AuthGuard } from '@/components/AuthGuard';
 
 export default function TabLayout() {
@@ -47,6 +47,15 @@ export default function TabLayout() {
             title: 'Visão DM',
             tabBarIcon: ({ size, color }) => (
               <Eye size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="test"
+          options={{
+            title: 'Testes',
+            tabBarIcon: ({ size, color }) => (
+              <TestTube size={size} color={color} />
             ),
           }}
         />
