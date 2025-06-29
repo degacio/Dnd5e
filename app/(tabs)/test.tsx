@@ -10,19 +10,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { 
-  TestTube, 
-  Wifi, 
-  Database, 
-  User, 
-  Shield, 
-  CheckCircle, 
-  XCircle, 
-  RefreshCw,
-  Play,
-  Eye,
-  Settings
-} from 'lucide-react-native';
+import { TestTube, Wifi, Database, User, Shield, CircleCheck as CheckCircle, Circle as XCircle, RefreshCw, Play, Eye, Settings } from 'lucide-react-native';
 import { supabase, testSupabaseConnection } from '@/lib/supabase';
 
 interface TestResult {
