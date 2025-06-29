@@ -17,8 +17,9 @@ interface SpellListProps {
   spells: Spell[];
 }
 
-interface SchoolGroup {
-  school: string;
+interface SpellLevelGroup {
+  level: number;
+  levelName: string;
   spells: Spell[];
   count: number;
   expanded: boolean;
@@ -29,7 +30,7 @@ export function SpellList({ spells }: SpellListProps) {
   const [searchText, setSearchText] = useState('');
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [showClassFilter, setShowClassFilter] = useState(false);
-  const [expandedSchools, setExpandedSchools] = useState<Set<string>>(new Set());
+  const [expandedLevels, setExpandedLevels] = useState<Set<number>>(new Set());
 
   // Get all unique classes from spells
   const availableClasses = useMemo(() => {
@@ -65,35 +66,45 @@ export function SpellList({ spells }: SpellListProps) {
     });
   }, [spells, searchText, selectedClass]);
 
-  const schoolGroups = useMemo(() => {
-    const groups: Record<string, Spell[]> = {};
+  const spellLevelGroups = useMemo(() => {
+    const groups: Record<number, Spell[]> = {};
     
     filteredSpells.forEach((spell) => {
-      if (!groups[spell.school]) {
-        groups[spell.school] = [];
+      if (!groups[spell.level]) {
+        groups[spell.level] = [];
       }
-      groups[spell.school].push(spell);
+      groups[spell.level].push(spell);
     });
 
-    // Convert to array and sort schools alphabetically
-    return Object.keys(groups)
-      .sort((a, b) => a.localeCompare(b))
-      .map((school) => ({
-        school,
-        spells: groups[school].sort((a, b) => a.name.localeCompare(b.name)),
-        count: groups[school].length,
-        expanded: expandedSchools.has(school),
-      }));
-  }, [filteredSpells, expandedSchools]);
+    // Sort spells within each level alphabetically
+    Object.keys(groups).forEach(level => {
+      groups[parseInt(level)].sort((a, b) => a.name.localeCompare(b.name));
+    });
 
-  const toggleSchool = (school: string) => {
-    const newExpanded = new Set(expandedSchools);
-    if (newExpanded.has(school)) {
-      newExpanded.delete(school);
+    // Convert to array and sort by level (0-9)
+    return Array.from({ length: 10 }, (_, index) => {
+      const level = index;
+      const spellsAtLevel = groups[level] || [];
+      const levelName = level === 0 ? 'Truques' : `${level}º Círculo`;
+      
+      return {
+        level,
+        levelName,
+        spells: spellsAtLevel,
+        count: spellsAtLevel.length,
+        expanded: expandedLevels.has(level),
+      };
+    }).filter(group => group.count > 0); // Only show levels that have spells
+  }, [filteredSpells, expandedLevels]);
+
+  const toggleLevel = (level: number) => {
+    const newExpanded = new Set(expandedLevels);
+    if (newExpanded.has(level)) {
+      newExpanded.delete(level);
     } else {
-      newExpanded.add(school);
+      newExpanded.add(level);
     }
-    setExpandedSchools(newExpanded);
+    setExpandedLevels(newExpanded);
   };
 
   const selectClass = (className: string | null) => {
@@ -103,21 +114,21 @@ export function SpellList({ spells }: SpellListProps) {
 
   const totalSpells = filteredSpells.length;
 
-  // Debug information
-  console.log('Total spells:', spells.length);
-  console.log('Available classes:', availableClasses);
-  console.log('Selected class:', selectedClass);
-  console.log('Filtered spells count:', filteredSpells.length);
-  
-  if (selectedClass) {
-    const spellsForClass = spells.filter(spell => 
-      spell.classes && Array.isArray(spell.classes) && 
-      spell.classes.some(className => 
-        className && className.trim().toLowerCase() === selectedClass.toLowerCase()
-      )
-    );
-    console.log(`Spells for class "${selectedClass}":`, spellsForClass.length);
-  }
+  const getLevelColor = (level: number): string => {
+    const colors = [
+      '#8E44AD', // Truques - Roxo
+      '#3498DB', // 1º - Azul
+      '#27AE60', // 2º - Verde
+      '#F39C12', // 3º - Laranja
+      '#E74C3C', // 4º - Vermelho
+      '#9B59B6', // 5º - Roxo claro
+      '#1ABC9C', // 6º - Turquesa
+      '#34495E', // 7º - Azul escuro
+      '#E67E22', // 8º - Laranja escuro
+      '#8B4513', // 9º - Marrom
+    ];
+    return colors[level] || '#666';
+  };
 
   return (
     <View style={styles.container}>
@@ -165,40 +176,31 @@ export function SpellList({ spells }: SpellListProps) {
             )}
           </Text>
         </View>
-
-        {/* Debug info - remove in production */}
-        {__DEV__ && (
-          <View style={styles.debugContainer}>
-            <Text style={styles.debugText}>
-              Debug: {spells.length} total, {availableClasses.length} classes
-            </Text>
-          </View>
-        )}
       </View>
 
       <FlatList
-        data={schoolGroups}
-        keyExtractor={(item) => item.school}
+        data={spellLevelGroups}
+        keyExtractor={(item) => item.level.toString()}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
-          <View style={styles.schoolContainer}>
+          <View style={styles.levelContainer}>
             <TouchableOpacity
               style={[
-                styles.schoolHeader,
-                { backgroundColor: SchoolColors[item.school as keyof typeof SchoolColors] },
+                styles.levelHeader,
+                { backgroundColor: getLevelColor(item.level) },
               ]}
-              onPress={() => toggleSchool(item.school)}
+              onPress={() => toggleLevel(item.level)}
               activeOpacity={0.8}
             >
-              <View style={styles.schoolHeaderContent}>
-                <View style={styles.schoolTitleContainer}>
+              <View style={styles.levelHeaderContent}>
+                <View style={styles.levelTitleContainer}>
                   {item.expanded ? (
                     <ChevronDown size={22} color="#FFFFFF" />
                   ) : (
                     <ChevronRight size={22} color="#FFFFFF" />
                   )}
-                  <Text style={styles.schoolTitle}>
-                    Escola de {item.school}
+                  <Text style={styles.levelTitle}>
+                    {item.levelName}
                   </Text>
                 </View>
                 <View style={styles.countBadge}>
@@ -384,25 +386,14 @@ const styles = StyleSheet.create({
     color: '#999',
     fontWeight: '400',
   },
-  debugContainer: {
-    marginTop: 8,
-    padding: 8,
-    backgroundColor: '#FFF3CD',
-    borderRadius: 6,
-  },
-  debugText: {
-    fontSize: 12,
-    color: '#856404',
-    textAlign: 'center',
-  },
   listContent: {
     paddingBottom: 24,
   },
-  schoolContainer: {
+  levelContainer: {
     marginTop: 20,
     marginHorizontal: 16,
   },
-  schoolHeader: {
+  levelHeader: {
     borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 20,
@@ -414,17 +405,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  schoolHeaderContent: {
+  levelHeaderContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  schoolTitleContainer: {
+  levelTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  schoolTitle: {
+  levelTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
