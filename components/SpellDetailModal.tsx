@@ -24,8 +24,20 @@ function FormattedText({ text, style }: { text: string; style?: any }) {
     const parts = [];
     let uniqueKey = 0; // Single counter for all keys to prevent collisions
 
+    // First, decode HTML entities
+    let decodedText = htmlText
+      .replace(/&emsp;/g, '    ') // Em space (4 spaces)
+      .replace(/&ensp;/g, '  ')  // En space (2 spaces)
+      .replace(/&nbsp;/g, ' ')   // Non-breaking space
+      .replace(/&amp;/g, '&')    // Ampersand
+      .replace(/&lt;/g, '<')     // Less than
+      .replace(/&gt;/g, '>')     // Greater than
+      .replace(/&quot;/g, '"')   // Quote
+      .replace(/&#39;/g, "'")    // Apostrophe
+      .replace(/&apos;/g, "'");  // Apostrophe (alternative)
+
     // Split by <br> tags first to handle line breaks
-    const lines = htmlText.split(/<br\s*\/?>/gi);
+    const lines = decodedText.split(/<br\s*\/?>/gi);
     
     lines.forEach((line, lineIndex) => {
       if (lineIndex > 0) {
