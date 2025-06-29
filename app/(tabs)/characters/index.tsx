@@ -129,6 +129,27 @@ export default function CharactersTab() {
     return allSpells.find(spell => spell.name === spellName) || null;
   };
 
+  // Função para calcular espaços de magia baseado na classe e nível
+  const calculateSpellSlots = (characterClass: DnDClass, level: number): Record<string, [number, number]> => {
+    const spellSlots: Record<string, [number, number]> = {};
+    
+    if (!characterClass.spellcasting) {
+      return spellSlots;
+    }
+
+    // Usar o índice correto (level - 1) para acessar os arrays de progressão
+    const levelIndex = level - 1;
+    
+    Object.entries(characterClass.spellcasting.spellSlots).forEach(([spellLevel, slotsArray]) => {
+      const maxSlots = slotsArray[levelIndex] || 0;
+      if (maxSlots > 0) {
+        spellSlots[spellLevel] = [maxSlots, maxSlots]; // [current, max] - inicia com todos os slots disponíveis
+      }
+    });
+
+    return spellSlots;
+  };
+
   const prepareCharacterSpells = (character: Character): CharacterSpells => {
     const characterClass = classesData.find(cls => cls.name === character.class_name) || null;
     
@@ -158,18 +179,32 @@ export default function CharactersTab() {
       spellsByLevel[parseInt(level)].sort((a, b) => a.name.localeCompare(b.name));
     });
 
-    // Get spell slots information
+    // Get spell slots information - usar dados salvos ou calcular baseado na classe
     const spellSlots: SpellSlotInfo[] = [];
-    if (character.spell_slots && typeof character.spell_slots === 'object') {
-      Object.entries(character.spell_slots).forEach(([level, slots]) => {
-        if (Array.isArray(slots) && slots.length >= 2) {
+    
+    if (characterClass?.spellcasting) {
+      // Se o personagem tem spell_slots salvos, usar esses dados
+      if (character.spell_slots && typeof character.spell_slots === 'object' && Object.keys(character.spell_slots).length > 0) {
+        Object.entries(character.spell_slots).forEach(([level, slots]) => {
+          if (Array.isArray(slots) && slots.length >= 2) {
+            spellSlots.push({
+              level: parseInt(level),
+              current: slots[0],
+              max: slots[1]
+            });
+          }
+        });
+      } else {
+        // Se não tem dados salvos, calcular baseado na classe e nível
+        const calculatedSlots = calculateSpellSlots(characterClass, character.level);
+        Object.entries(calculatedSlots).forEach(([level, [current, max]]) => {
           spellSlots.push({
             level: parseInt(level),
-            current: slots[0],
-            max: slots[1]
+            current,
+            max
           });
-        }
-      });
+        });
+      }
     }
 
     // Sort spell slots by level
@@ -219,6 +254,14 @@ export default function CharactersTab() {
 
       const currentSlots = { ...selectedCharacterSpells.character.spell_slots };
       const levelKey = level.toString();
+      
+      // Se não existe o slot para este nível, criar baseado nos dados da classe
+      if (!currentSlots[levelKey] && selectedCharacterSpells.characterClass?.spellcasting) {
+        const calculatedSlots = calculateSpellSlots(selectedCharacterSpells.characterClass, selectedCharacterSpells.character.level);
+        if (calculatedSlots[levelKey]) {
+          currentSlots[levelKey] = calculatedSlots[levelKey];
+        }
+      }
       
       if (currentSlots[levelKey] && Array.isArray(currentSlots[levelKey])) {
         const slots = [...currentSlots[levelKey]];

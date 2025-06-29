@@ -42,6 +42,27 @@ export default function CreateCharacterScreen() {
   const [loading, setLoading] = useState(false);
   const [selectedClass, setSelectedClass] = useState<DnDClass | null>(null);
 
+  // Função para calcular espaços de magia baseado na classe e nível
+  const calculateSpellSlots = (characterClass: DnDClass, level: number): Record<string, [number, number]> => {
+    const spellSlots: Record<string, [number, number]> = {};
+    
+    if (!characterClass.spellcasting) {
+      return spellSlots;
+    }
+
+    // Usar o índice correto (level - 1) para acessar os arrays de progressão
+    const levelIndex = level - 1;
+    
+    Object.entries(characterClass.spellcasting.spellSlots).forEach(([spellLevel, slotsArray]) => {
+      const maxSlots = slotsArray[levelIndex] || 0;
+      if (maxSlots > 0) {
+        spellSlots[spellLevel] = [maxSlots, maxSlots]; // [current, max] - inicia com todos os slots disponíveis
+      }
+    });
+
+    return spellSlots;
+  };
+
   useEffect(() => {
     if (formData.class_name) {
       const dndClass = classesData.find(cls => cls.name === formData.class_name);
@@ -61,17 +82,10 @@ export default function CreateCharacterScreen() {
 
         // Set up spell slots if it's a spellcasting class
         if (dndClass.spellcasting) {
-          const spellSlots: Record<string, [number, number]> = {};
-          Object.entries(dndClass.spellcasting.spellSlots).forEach(([level, slots]) => {
-            const slotsForLevel = slots[formData.level - 1] || 0;
-            if (slotsForLevel > 0) {
-              spellSlots[level] = [slotsForLevel, slotsForLevel]; // [current, max]
-            }
-          });
-          
+          const calculatedSlots = calculateSpellSlots(dndClass, formData.level);
           setFormData(prev => ({
             ...prev,
-            spell_slots: spellSlots,
+            spell_slots: calculatedSlots,
           }));
         } else {
           setFormData(prev => ({
@@ -326,6 +340,10 @@ export default function CreateCharacterScreen() {
                   </View>
                 ))}
               </View>
+              
+              <Text style={styles.spellSlotsNote}>
+                Os espaços de magia são calculados automaticamente baseados na classe e nível do personagem.
+              </Text>
             </View>
           )}
 
@@ -524,6 +542,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    marginBottom: 12,
   },
   spellSlotCard: {
     backgroundColor: '#F8F9FA',
@@ -541,6 +560,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#8E44AD',
+  },
+  spellSlotsNote: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
   classDescription: {
     fontSize: 14,
