@@ -160,4 +160,11 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginLeft: 4,
   },
+negrito: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 8,
+    marginRight: 8,
+    fontWeight: '500',
+  },
 });
