@@ -24,6 +24,27 @@ interface SpellLevel {
   expanded: boolean;
 }
 
+// Helper functions moved outside the component to avoid initialization issues
+const getLevelName = (level: number): string => {
+  return level === 0 ? 'Truques' : `${level}º Círculo`;
+};
+
+const getLevelColor = (level: number): string => {
+  const colors = [
+    '#8E44AD', // Truques - Roxo
+    '#3498DB', // 1º - Azul
+    '#27AE60', // 2º - Verde
+    '#F39C12', // 3º - Laranja
+    '#E74C3C', // 4º - Vermelho
+    '#9B59B6', // 5º - Roxo claro
+    '#1ABC9C', // 6º - Turquesa
+    '#34495E', // 7º - Azul escuro
+    '#E67E22', // 8º - Laranja escuro
+    '#8B4513', // 9º - Marrom
+  ];
+  return colors[level] || '#666';
+};
+
 export function SpellList({ spells }: SpellListProps) {
   const [selectedSpell, setSelectedSpell] = useState<Spell | null>(null);
   const [searchText, setSearchText] = useState('');
@@ -105,26 +126,6 @@ export function SpellList({ spells }: SpellListProps) {
   };
 
   const totalSpells = filteredSpells.length;
-
-  const getLevelName = (level: number): string => {
-    return level === 0 ? 'Truques' : `${level}º Círculo`;
-  };
-
-  const getLevelColor = (level: number): string => {
-    const colors = [
-      '#8E44AD', // Truques - Roxo
-      '#3498DB', // 1º - Azul
-      '#27AE60', // 2º - Verde
-      '#F39C12', // 3º - Laranja
-      '#E74C3C', // 4º - Vermelho
-      '#9B59B6', // 5º - Roxo claro
-      '#1ABC9C', // 6º - Turquesa
-      '#34495E', // 7º - Azul escuro
-      '#E67E22', // 8º - Laranja escuro
-      '#8B4513', // 9º - Marrom
-    ];
-    return colors[level] || '#666';
-  };
 
   const renderSpellItem = ({ item }: { item: Spell }) => (
     <View style={styles.spellItemContainer}>
