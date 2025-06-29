@@ -10,8 +10,8 @@ async function validateUserFromToken(authHeader: string) {
 
     const token = authHeader.replace('Bearer ', '');
     
-    // Use admin client to validate the token - changed from getUserById to getUser
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUser(token);
+    // Use admin client to validate the token - use getUser for JWT validation
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     
     if (userError) {
       console.error('User validation error:', userError);
