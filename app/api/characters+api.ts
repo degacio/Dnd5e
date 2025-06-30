@@ -185,25 +185,6 @@ export async function POST(request: Request) {
       });
     }
 
-    // Critical: Additional comprehensive check for user object and ID
-    if (!user || typeof user !== 'object' || !user.id || typeof user.id !== 'string') {
-      console.error('💥 Critical: Invalid user object after validation:', { 
-        userExists: !!user, 
-        userType: typeof user,
-        hasId: user ? !!user.id : false,
-        idType: user && user.id ? typeof user.id : 'undefined'
-      });
-      return new Response(JSON.stringify({ 
-        error: 'Authentication failed',
-        message: 'Invalid user session - please log in again'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    console.log('✅ User authenticated for POST:', { userId: user.id, email: user.email });
-
     // Parse request body
     const body = await request.json();
     
@@ -216,6 +197,25 @@ export async function POST(request: Request) {
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    // Critical: Additional defensive check for user object right before using it
+    if (!user || typeof user !== 'object' || !user.id || typeof user.id !== 'string') {
+      console.error('💥 Critical: User object is null or invalid when creating character data:', { 
+        userExists: !!user, 
+        userType: typeof user,
+        hasId: user ? !!user.id : false,
+        idType: user && user.id ? typeof user.id : 'undefined'
+      });
+      return new Response(JSON.stringify({ 
+        error: 'Authentication failed',
+        message: 'User session is invalid - please log in again'
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log('✅ User authenticated for POST:', { userId: user.id, email: user.email });
     
     // Prepare character data with validated user ID
     const characterData = {
