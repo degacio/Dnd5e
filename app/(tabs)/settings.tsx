@@ -37,6 +37,7 @@ export default function SettingsTab() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [dimensions, setDimensions] = useState(Dimensions.get('window'));
+  const [serviceKeyConfigured, setServiceKeyConfigured] = useState<boolean | null>(null);
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
@@ -49,6 +50,7 @@ export default function SettingsTab() {
   useEffect(() => {
     console.log('🔄 SettingsTab mounted, getting user info...');
     getUserInfo();
+    checkServiceKeyConfiguration();
   }, []);
 
   const getUserInfo = async () => {
@@ -64,6 +66,30 @@ export default function SettingsTab() {
       }
     } catch (error) {
       console.error('💥 Error getting user info:', error);
+    }
+  };
+
+  const checkServiceKeyConfiguration = async () => {
+    try {
+      console.log('🔍 Checking service key configuration...');
+      
+      // Test the API health endpoint which will indicate if service key is configured
+      const response = await fetch('/api/test-connection');
+      const data = await response.json();
+      
+      console.log('📊 Service key check response:', data);
+      
+      // If the API can connect to Supabase, the service key is configured
+      if (response.ok && data.supabase && data.supabase.connected) {
+        console.log('✅ Service key is configured');
+        setServiceKeyConfigured(true);
+      } else {
+        console.log('❌ Service key is not configured or connection failed');
+        setServiceKeyConfigured(false);
+      }
+    } catch (error) {
+      console.error('💥 Error checking service key configuration:', error);
+      setServiceKeyConfigured(false);
     }
   };
 
@@ -400,6 +426,7 @@ export default function SettingsTab() {
     spellsFileLoaded,
     classesFileLoaded,
     showLogoutModal,
+    serviceKeyConfigured,
     screenDimensions: dimensions,
     isSmallScreen,
     isVerySmallScreen
@@ -585,6 +612,40 @@ export default function SettingsTab() {
               </Text>
               <Text style={[styles.infoDescription, isVerySmallScreen && styles.infoDescriptionSmall]}>
                 Toque em "Carregar" para selecionar um arquivo JSON do seu dispositivo. O arquivo será validado antes de ser aplicado.
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Seção de Status do Sistema */}
+        <View style={[styles.section, isSmallScreen && styles.sectionCompact]}>
+          <Text style={[styles.sectionTitle, isVerySmallScreen && styles.sectionTitleSmall]}>Status do Sistema</Text>
+          
+          <View style={[styles.infoCard, isVerySmallScreen && styles.infoCardCompact]}>
+            <Settings size={isVerySmallScreen ? 18 : 20} color="#666" />
+            <View style={styles.infoContent}>
+              <Text style={[styles.infoTitle, isVerySmallScreen && styles.infoTitleSmall]}>
+                Configuração do Servidor
+              </Text>
+              <Text style={[styles.infoDescription, isVerySmallScreen && styles.infoDescriptionSmall]}>
+                Service Key: {serviceKeyConfigured === null ? '🔄 Verificando...' : serviceKeyConfigured ? '✅ Configurado' : '❌ Não configurado'}
+              </Text>
+              {serviceKeyConfigured === false && (
+                <Text style={[styles.warningText, isVerySmallScreen && styles.warningTextSmall]}>
+                  A chave de serviço do Supabase não está configurada. Algumas funcionalidades podem não funcionar corretamente.
+                </Text>
+              )}
+            </View>
+          </View>
+
+          <View style={[styles.infoCard, isVerySmallScreen && styles.infoCardCompact]}>
+            <Info size={isVerySmallScreen ? 18 : 20} color="#666" />
+            <View style={styles.infoContent}>
+              <Text style={[styles.infoTitle, isVerySmallScreen && styles.infoTitleSmall]}>
+                Plataforma
+              </Text>
+              <Text style={[styles.infoDescription, isVerySmallScreen && styles.infoDescriptionSmall]}>
+                {Platform.OS} • {new Date().toLocaleString('pt-BR')}
               </Text>
             </View>
           </View>
@@ -919,6 +980,17 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   infoDescriptionSmall: {
+    fontSize: 11,
+    lineHeight: 14,
+  },
+  warningText: {
+    fontSize: 12,
+    color: '#E74C3C',
+    lineHeight: 16,
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  warningTextSmall: {
     fontSize: 11,
     lineHeight: 14,
   },
