@@ -319,19 +319,26 @@ export function GrimoireTab() {
 
       console.log('🗑️ Excluindo personagem:', selectedCharacter.character.name);
 
+      // Create AbortController with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+      }, 30000); // 30 second timeout
+
       const response = await fetch(`/api/characters/${selectedCharacter.character.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       console.log('📡 Delete response status:', response.status);
       console.log('📡 Delete response ok:', response.ok);
 
-      // ✅ CORREÇÃO: Verificar se a resposta foi bem-sucedida ANTES de tentar parsear
       if (response.ok) {
-        // Resposta bem-sucedida (status 200-299)
         console.log('✅ Personagem excluído com sucesso');
         
         // Remove character from local state
@@ -349,14 +356,12 @@ export function GrimoireTab() {
           Alert.alert('Sucesso', successMessage);
         }
       } else {
-        // Resposta com erro (status 400+)
         let errorMessage = 'Não foi possível excluir o personagem.';
         
         try {
           const errorData = await response.json();
           console.error('❌ Erro do servidor:', errorData);
           
-          // Verificar se é um erro temporário de conexão
           if (errorData.type === 'network_error' || response.status === 503) {
             errorMessage = 'Problema temporário de conexão. Tente novamente em alguns segundos.';
           } else if (errorData.message) {
@@ -375,17 +380,23 @@ export function GrimoireTab() {
           Alert.alert('Erro', errorMessage);
         }
       }
-    } catch (networkError) {
-      console.error('❌ Erro de rede:', networkError);
+    } catch (error) {
+      console.error('❌ Erro ao excluir personagem:', error);
       
       let errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
       
-      // Verificar se é um erro específico de rede
-      if (networkError instanceof Error) {
-        if (networkError.message.includes('fetch')) {
-          errorMessage = 'Problema de conexão com o servidor. Tente novamente.';
-        } else if (networkError.message.includes('timeout')) {
-          errorMessage = 'Tempo limite excedido. Tente novamente.';
+      // Enhanced error handling for aborted signals and network issues
+      if (error instanceof Error) {
+        if (error.name === 'AbortError' || error.message.includes('signal is aborted')) {
+          errorMessage = 'A operação foi cancelada devido a problemas de conexão com o servidor. Isso pode indicar instabilidade na rede ou problemas temporários no servidor. Tente novamente em alguns momentos.';
+        } else if (error.message.includes('fetch failed') || error.message.includes('other side closed')) {
+          errorMessage = 'Falha na conexão com o servidor. Isso pode ser devido a: 1) Instabilidade temporária da rede, 2) Problemas no servidor Supabase, 3) Interferência de firewall/proxy. Tente novamente em alguns momentos.';
+        } else if (error.message.includes('ECONNREFUSED')) {
+          errorMessage = 'Conexão recusada pelo servidor. Isso geralmente significa: 1) Projeto Supabase temporariamente indisponível, 2) Sobrecarga do servidor, 3) Problemas de roteamento de rede. Tente novamente em alguns momentos.';
+        } else if (error.message.includes('ENOTFOUND')) {
+          errorMessage = 'Falha na resolução DNS. Isso geralmente significa: 1) Problemas temporários de DNS, 2) Problemas de conectividade de rede, 3) URL do Supabase inválida. Verifique sua conexão e tente novamente.';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'Tempo limite da operação excedido. O servidor pode estar sobrecarregado ou há problemas de conectividade. Tente novamente em alguns momentos.';
         }
       }
       
