@@ -133,6 +133,8 @@ export default function CreateCharacterScreen() {
         return;
       }
 
+      console.log('🚀 Criando personagem:', formData.name);
+
       const response = await fetch('/api/characters', {
         method: 'POST',
         headers: {
@@ -145,31 +147,79 @@ export default function CreateCharacterScreen() {
         }),
       });
 
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response ok:', response.ok);
+
+      // ✅ CORREÇÃO: Verificar se a resposta foi bem-sucedida ANTES de tentar parsear
       if (response.ok) {
-        const successMessage = `Personagem ${formData.name} criado com sucesso!`;
+        // Resposta bem-sucedida (status 200-299)
+        try {
+          const result = await response.json();
+          console.log('✅ Personagem criado com sucesso:', result);
+          
+          const successMessage = `Personagem ${formData.name} criado com sucesso!`;
+          
+          if (Platform.OS === 'web') {
+            alert(`Sucesso: ${successMessage}`);
+          } else {
+            Alert.alert('Sucesso', successMessage);
+          }
+          
+          router.back();
+        } catch (parseError) {
+          console.error('❌ Erro ao parsear resposta de sucesso:', parseError);
+          // Mesmo com erro de parse, se o status foi 200-299, consideramos sucesso
+          const successMessage = `Personagem ${formData.name} criado com sucesso!`;
+          
+          if (Platform.OS === 'web') {
+            alert(`Sucesso: ${successMessage}`);
+          } else {
+            Alert.alert('Sucesso', successMessage);
+          }
+          
+          router.back();
+        }
+      } else {
+        // Resposta com erro (status 400+)
+        let errorMessage = 'Não foi possível criar o personagem.';
         
-        if (Platform.OS === 'web') {
-          alert(`Sucesso: ${successMessage}`);
-        } else {
-          Alert.alert('Sucesso', successMessage);
+        try {
+          const errorData = await response.json();
+          console.error('❌ Erro do servidor:', errorData);
+          
+          // Verificar se é um erro temporário de conexão
+          if (errorData.type === 'network_error' || response.status === 503) {
+            errorMessage = 'Problema temporário de conexão. Tente novamente em alguns segundos.';
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          } else {
+            errorMessage = `Erro do servidor (${response.status}). Tente novamente.`;
+          }
+        } catch (parseError) {
+          console.error('❌ Erro ao parsear resposta de erro:', parseError);
+          errorMessage = `Erro do servidor (${response.status}). Tente novamente.`;
         }
         
-        router.back();
-      } else {
-        const errorText = await response.text();
-        console.error('Error creating character:', errorText);
-        
-        const errorMessage = 'Não foi possível criar o personagem. Tente novamente.';
         if (Platform.OS === 'web') {
           alert(`Erro: ${errorMessage}`);
         } else {
           Alert.alert('Erro', errorMessage);
         }
       }
-    } catch (error) {
-      console.error('Error creating character:', error);
+    } catch (networkError) {
+      console.error('❌ Erro de rede:', networkError);
       
-      const errorMessage = 'Erro inesperado ao criar personagem.';
+      let errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+      
+      // Verificar se é um erro específico de rede
+      if (networkError instanceof Error) {
+        if (networkError.message.includes('fetch')) {
+          errorMessage = 'Problema de conexão com o servidor. Tente novamente.';
+        } else if (networkError.message.includes('timeout')) {
+          errorMessage = 'Tempo limite excedido. Tente novamente.';
+        }
+      }
+      
       if (Platform.OS === 'web') {
         alert(`Erro: ${errorMessage}`);
       } else {

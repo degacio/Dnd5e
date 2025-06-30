@@ -317,6 +317,8 @@ export function GrimoireTab() {
         return;
       }
 
+      console.log('🗑️ Excluindo personagem:', selectedCharacter.character.name);
+
       const response = await fetch(`/api/characters/${selectedCharacter.character.id}`, {
         method: 'DELETE',
         headers: {
@@ -324,7 +326,14 @@ export function GrimoireTab() {
         },
       });
 
+      console.log('📡 Delete response status:', response.status);
+      console.log('📡 Delete response ok:', response.ok);
+
+      // ✅ CORREÇÃO: Verificar se a resposta foi bem-sucedida ANTES de tentar parsear
       if (response.ok) {
+        // Resposta bem-sucedida (status 200-299)
+        console.log('✅ Personagem excluído com sucesso');
+        
         // Remove character from local state
         setCharacters(prev => prev.filter(char => char.id !== selectedCharacter.character.id));
         
@@ -340,34 +349,24 @@ export function GrimoireTab() {
           Alert.alert('Sucesso', successMessage);
         }
       } else {
-        let errorMessage = 'Não foi possível excluir o personagem. Tente novamente.';
+        // Resposta com erro (status 400+)
+        let errorMessage = 'Não foi possível excluir o personagem.';
         
         try {
-          // Try to parse JSON response for detailed error
           const errorData = await response.json();
+          console.error('❌ Erro do servidor:', errorData);
           
-          if (errorData.type === 'network_error') {
-            errorMessage = 'Erro de conexão com o servidor. Verifique sua internet e tente novamente.';
-          } else if (errorData.type === 'auth_error') {
-            errorMessage = 'Sessão expirada. Faça login novamente.';
+          // Verificar se é um erro temporário de conexão
+          if (errorData.type === 'network_error' || response.status === 503) {
+            errorMessage = 'Problema temporário de conexão. Tente novamente em alguns segundos.';
           } else if (errorData.message) {
             errorMessage = errorData.message;
+          } else {
+            errorMessage = `Erro do servidor (${response.status}). Tente novamente.`;
           }
         } catch (parseError) {
-          // If JSON parsing fails, try to get text response
-          try {
-            const errorText = await response.text();
-            console.error('Error deleting character (text):', errorText);
-            
-            // Check for specific error patterns in text response
-            if (errorText.includes('fetch failed') || errorText.includes('network')) {
-              errorMessage = 'Erro de conexão com o banco de dados. Verifique sua internet e tente novamente.';
-            } else if (errorText.includes('authentication') || errorText.includes('unauthorized')) {
-              errorMessage = 'Sessão expirada. Faça login novamente.';
-            }
-          } catch (textError) {
-            console.error('Error parsing response:', textError);
-          }
+          console.error('❌ Erro ao parsear resposta de erro:', parseError);
+          errorMessage = `Erro do servidor (${response.status}). Tente novamente.`;
         }
         
         if (Platform.OS === 'web') {
@@ -376,24 +375,17 @@ export function GrimoireTab() {
           Alert.alert('Erro', errorMessage);
         }
       }
-    } catch (error) {
-      console.error('Error deleting character:', error);
+    } catch (networkError) {
+      console.error('❌ Erro de rede:', networkError);
       
-      let errorMessage = 'Erro inesperado ao excluir personagem.';
+      let errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
       
-      // Check for network-related errors
-      if (error instanceof TypeError && (
-        error.message.includes('fetch') || 
-        error.message.includes('network') ||
-        error.message.includes('Failed to fetch')
-      )) {
-        errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
-      } else if (error instanceof Error) {
-        // Check for other specific error types
-        if (error.message.includes('timeout')) {
+      // Verificar se é um erro específico de rede
+      if (networkError instanceof Error) {
+        if (networkError.message.includes('fetch')) {
+          errorMessage = 'Problema de conexão com o servidor. Tente novamente.';
+        } else if (networkError.message.includes('timeout')) {
           errorMessage = 'Tempo limite excedido. Tente novamente.';
-        } else if (error.message.includes('abort')) {
-          errorMessage = 'Operação cancelada. Tente novamente.';
         }
       }
       
