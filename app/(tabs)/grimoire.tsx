@@ -319,11 +319,11 @@ export function GrimoireTab() {
 
       console.log('🗑️ Excluindo personagem:', selectedCharacter.character.name);
 
-      // Create AbortController with timeout
+      // Create AbortController with increased timeout - changed from 30 seconds to 60 seconds
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
         controller.abort();
-      }, 30000); // 30 second timeout
+      }, 60000); // Increased timeout from 30000 to 60000 (60 seconds)
 
       const response = await fetch(`/api/characters/${selectedCharacter.character.id}`, {
         method: 'DELETE',
