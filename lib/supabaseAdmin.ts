@@ -39,14 +39,14 @@ console.log('🔧 Supabase URL:', supabaseUrl);
 console.log('🔧 Service key available:', !!supabaseServiceKey);
 console.log('🔧 Service key length:', supabaseServiceKey.length);
 
-// Connection pool and circuit breaker pattern
+// Connection pool and circuit breaker pattern - Increased timeouts for better stability
 let connectionPool = new Map();
 let circuitBreakerState = 'CLOSED'; // CLOSED, OPEN, HALF_OPEN
 let failureCount = 0;
 let lastFailureTime = 0;
 const FAILURE_THRESHOLD = 5;
-const RECOVERY_TIMEOUT = 30000; // 30 seconds
-const CONNECTION_TIMEOUT = 60000; // 60 seconds
+const RECOVERY_TIMEOUT = 45000; // Increased from 30 seconds to 45 seconds
+const CONNECTION_TIMEOUT = 120000; // Increased from 60 seconds to 2 minutes
 
 // Enhanced fetch function with circuit breaker and connection pooling
 const enhancedFetch = async (url: string, options: RequestInit = {}) => {

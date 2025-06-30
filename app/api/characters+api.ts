@@ -232,24 +232,23 @@ export async function POST(request: Request) {
 
     console.log('📝 Creating character:', { name: characterData.name, class: characterData.class_name });
 
-    // Insert the character using enhanced recovery
+    // Insert the character using enhanced recovery - Fixed to handle RLS policies properly
     const insertOperation = async () => {
       const { data, error } = await supabaseAdmin
         .from('characters')
         .insert([characterData])
-        .select()
-        .single();
+        .select();
 
       if (error) {
         throw error;
       }
 
-      // Critical: Check if data is null even when no error was thrown
-      if (!data) {
-        throw new Error('Insert operation succeeded but returned no data. This may indicate a database configuration issue.');
+      // Check if data is null or empty array even when no error was thrown
+      if (!data || data.length === 0) {
+        throw new Error('Insert operation succeeded but returned no data. This may indicate a database configuration issue or RLS policy preventing data return.');
       }
 
-      return data;
+      return data[0]; // Return the first (and should be only) inserted record
     };
 
     try {
