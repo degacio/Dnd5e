@@ -153,17 +153,19 @@ export async function POST(request: Request) {
       });
     }
 
-    // Additional defensive check for user and user.id
-    if (!user || !user.id) {
-      console.error('💥 Critical: User object is null or missing ID after validation:', { 
+    // Critical: Additional comprehensive check for user object and ID
+    if (!user || typeof user !== 'object' || !user.id || typeof user.id !== 'string') {
+      console.error('💥 Critical: Invalid user object after validation:', { 
         userExists: !!user, 
-        hasId: user ? !!user.id : false 
+        userType: typeof user,
+        hasId: user ? !!user.id : false,
+        idType: user && user.id ? typeof user.id : 'undefined'
       });
       return new Response(JSON.stringify({ 
-        error: 'Internal server error',
-        message: 'User validation failed - invalid user state'
+        error: 'Authentication failed',
+        message: 'Invalid user session - please log in again'
       }), {
-        status: 500,
+        status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
     }
@@ -185,7 +187,7 @@ export async function POST(request: Request) {
     
     // Prepare character data with validated user ID
     const characterData = {
-      user_id: user.id, // Use the validated user ID
+      user_id: user.id, // Now guaranteed to be a valid string
       name: body.name,
       class_name: body.class_name,
       level: body.level || 1,
