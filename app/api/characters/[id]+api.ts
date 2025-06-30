@@ -1,4 +1,4 @@
-import { supabaseAdmin, testSupabaseAdminConnection } from '@/lib/supabaseAdmin';
+import { supabaseAdmin, testSupabaseAdminConnection, executeWithRecovery } from '@/lib/supabaseAdmin';
 
 // Helper function to validate and get user from token
 async function validateUserFromToken(authHeader: string) {
@@ -54,25 +54,24 @@ function createErrorResponse(error: any, operation: string) {
     error.message.includes('Network connection failed') ||
     error.message.includes('other side closed') ||
     error.message.includes('Connection refused') ||
-    error.message.includes('DNS resolution failed')
+    error.message.includes('DNS resolution failed') ||
+    error.message.includes('Circuit breaker')
   )) {
     return new Response(JSON.stringify({ 
-      error: 'Erro de conexão com o banco de dados',
-      message: 'Não foi possível conectar ao banco de dados. Verifique sua conexão e tente novamente.',
+      error: 'Erro de conexão temporário',
+      message: 'Problema temporário de conexão com o banco de dados. O sistema está tentando se recuperar automaticamente.',
       type: 'network_error',
       troubleshooting: [
-        'Verifique sua conexão com a internet',
+        'Aguarde alguns segundos e tente novamente',
+        'O sistema possui recuperação automática para problemas de rede',
+        'Verifique sua conexão com a internet se o problema persistir',
         'Confirme se o projeto Supabase está ativo (não pausado)',
-        'Verifique se a URL do Supabase está correta no arquivo .env',
-        'Desative VPN temporariamente se estiver usando',
-        'Verifique configurações de firewall/proxy',
-        'Tente acessar o painel do Supabase no navegador',
-        'Reinicie o servidor de desenvolvimento',
-        'Use a aba "Testes" para diagnósticos detalhados',
-        'Tente trocar de rede (hotspot móvel) para testar'
+        'Tente recarregar a página se necessário',
+        'Use a aba "Testes" para diagnósticos detalhados'
       ],
       timestamp: new Date().toISOString(),
-      technical_details: error.message
+      technical_details: error.message,
+      recovery_info: 'O sistema tentará se recuperar automaticamente em alguns segundos'
     }), {
       status: 503,
       headers: { 'Content-Type': 'application/json' }
@@ -166,13 +165,6 @@ export async function GET(request: Request, { id }: { id: string }) {
       });
     }
 
-    // Test connection before proceeding
-    try {
-      await testDatabaseConnection();
-    } catch (connError) {
-      return createErrorResponse(connError, 'Database connection test');
-    }
-
     const authHeader = request.headers.get('Authorization');
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -202,49 +194,41 @@ export async function GET(request: Request, { id }: { id: string }) {
       });
     }
 
-    // Query the specific character with retry logic
-    let character = null;
-    let queryError = null;
-    
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        const { data, error } = await supabaseAdmin
-          .from('characters')
-          .select('*')
-          .eq('id', id)
-          .eq('user_id', user.id)
-          .single();
-        
-        character = data;
-        queryError = error;
-        break;
-      } catch (err) {
-        console.warn(`⚠️ Character query attempt ${attempt} failed:`, err);
-        queryError = err;
-        
-        if (attempt < 3) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-        }
+    // Query the specific character with enhanced recovery
+    const queryOperation = async () => {
+      const { data, error } = await supabaseAdmin
+        .from('characters')
+        .select('*')
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .single();
+      
+      if (error) {
+        throw error;
       }
-    }
+      
+      return data;
+    };
 
-    if (queryError) {
+    try {
+      const character = await executeWithRecovery(queryOperation, 'Character query');
+      
+      if (!character) {
+        return new Response(JSON.stringify({ 
+          error: 'Personagem não encontrado',
+          message: 'Personagem não encontrado ou você não tem permissão para acessá-lo.',
+          type: 'not_found',
+          timestamp: new Date().toISOString()
+        }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      return Response.json(character);
+    } catch (queryError) {
       return createErrorResponse(queryError, 'Database query');
     }
-
-    if (!character) {
-      return new Response(JSON.stringify({ 
-        error: 'Personagem não encontrado',
-        message: 'Personagem não encontrado ou você não tem permissão para acessá-lo.',
-        type: 'not_found',
-        timestamp: new Date().toISOString()
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    return Response.json(character);
   } catch (error) {
     console.error('API Error:', error);
     return createErrorResponse(error, 'API request');
@@ -263,13 +247,6 @@ export async function PUT(request: Request, { id }: { id: string }) {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
-    }
-
-    // Test connection before proceeding
-    try {
-      await testDatabaseConnection();
-    } catch (connError) {
-      return createErrorResponse(connError, 'Database connection test');
     }
 
     const authHeader = request.headers.get('Authorization');
@@ -313,50 +290,42 @@ export async function PUT(request: Request, { id }: { id: string }) {
       updated_at: new Date().toISOString(),
     };
 
-    // Update the character with retry logic
-    let character = null;
-    let updateError = null;
-    
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        const { data, error } = await supabaseAdmin
-          .from('characters')
-          .update(updateData)
-          .eq('id', id)
-          .eq('user_id', user.id)
-          .select()
-          .single();
-        
-        character = data;
-        updateError = error;
-        break;
-      } catch (err) {
-        console.warn(`⚠️ Character update attempt ${attempt} failed:`, err);
-        updateError = err;
-        
-        if (attempt < 3) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-        }
+    // Update the character with enhanced recovery
+    const updateOperation = async () => {
+      const { data, error } = await supabaseAdmin
+        .from('characters')
+        .update(updateData)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+      
+      if (error) {
+        throw error;
       }
-    }
+      
+      return data;
+    };
 
-    if (updateError) {
+    try {
+      const character = await executeWithRecovery(updateOperation, 'Character update');
+      
+      if (!character) {
+        return new Response(JSON.stringify({ 
+          error: 'Personagem não encontrado',
+          message: 'Personagem não encontrado ou você não tem permissão para atualizá-lo.',
+          type: 'not_found',
+          timestamp: new Date().toISOString()
+        }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      return Response.json(character);
+    } catch (updateError) {
       return createErrorResponse(updateError, 'Database update');
     }
-
-    if (!character) {
-      return new Response(JSON.stringify({ 
-        error: 'Personagem não encontrado',
-        message: 'Personagem não encontrado ou você não tem permissão para atualizá-lo.',
-        type: 'not_found',
-        timestamp: new Date().toISOString()
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    return Response.json(character);
   } catch (error) {
     console.error('API Error:', error);
     return createErrorResponse(error, 'API request');
@@ -378,16 +347,6 @@ export async function DELETE(request: Request, { id }: { id: string }) {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
-    }
-
-    // Enhanced connection test before proceeding with delete operation
-    console.log('🔍 Testing database connection before delete operation...');
-    try {
-      await testDatabaseConnection();
-      console.log('✅ Database connection test passed');
-    } catch (connError) {
-      console.error('❌ Database connection test failed:', connError);
-      return createErrorResponse(connError, 'Database connection test');
     }
 
     const authHeader = request.headers.get('Authorization');
@@ -424,97 +383,79 @@ export async function DELETE(request: Request, { id }: { id: string }) {
 
     console.log('✅ User validated:', user.id);
 
-    // Verify character exists and belongs to user before deletion with retry logic
+    // Verify character exists and belongs to user before deletion with enhanced recovery
     console.log(`🔍 Verifying character ${id} exists and belongs to user ${user.id}...`);
-    let existingCharacter = null;
-    let verifyError = null;
     
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        const { data, error } = await supabaseAdmin
-          .from('characters')
-          .select('id, name')
-          .eq('id', id)
-          .eq('user_id', user.id)
-          .single();
-        
-        existingCharacter = data;
-        verifyError = error;
-        break;
-      } catch (err) {
-        console.warn(`⚠️ Character verification attempt ${attempt} failed:`, err);
-        verifyError = err;
-        
-        if (attempt < 3) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-        }
+    const verifyOperation = async () => {
+      const { data, error } = await supabaseAdmin
+        .from('characters')
+        .select('id, name')
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .single();
+      
+      if (error) {
+        throw error;
       }
-    }
+      
+      return data;
+    };
     
-    if (verifyError) {
+    try {
+      const existingCharacter = await executeWithRecovery(verifyOperation, 'Character verification');
+      
+      if (!existingCharacter) {
+        console.error('❌ Character not found or access denied');
+        return new Response(JSON.stringify({ 
+          error: 'Personagem não encontrado',
+          message: 'Personagem não encontrado ou você não tem permissão para excluí-lo.',
+          type: 'not_found',
+          timestamp: new Date().toISOString()
+        }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      console.log(`✅ Character verified: ${existingCharacter.name}`);
+    } catch (verifyError) {
       console.error('❌ Character verification failed:', verifyError);
       return createErrorResponse(verifyError, 'Character verification');
     }
+
+    // Perform the deletion with enhanced error handling and recovery
+    console.log(`🗑️  Attempting to delete character ${id}...`);
     
-    if (!existingCharacter) {
-      console.error('❌ Character not found or access denied');
+    const deleteOperation = async () => {
+      const { error } = await supabaseAdmin
+        .from('characters')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) {
+        throw error;
+      }
+      
+      return true;
+    };
+
+    try {
+      await executeWithRecovery(deleteOperation, 'Character deletion');
+      
+      console.log('✅ Character deleted successfully');
       return new Response(JSON.stringify({ 
-        error: 'Personagem não encontrado',
-        message: 'Personagem não encontrado ou você não tem permissão para excluí-lo.',
-        type: 'not_found',
+        message: 'Personagem excluído com sucesso',
+        success: true,
         timestamp: new Date().toISOString()
       }), {
-        status: 404,
+        status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
-    }
-    
-    console.log(`✅ Character verified: ${existingCharacter.name}`);
-
-    // Perform the deletion with enhanced error handling and retry logic
-    console.log(`🗑️  Attempting to delete character ${id}...`);
-    let deleteError = null;
-    
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        const { error } = await supabaseAdmin
-          .from('characters')
-          .delete()
-          .eq('id', id)
-          .eq('user_id', user.id);
-
-        deleteError = error;
-        if (!error) break;
-        
-        console.warn(`⚠️ Delete attempt ${attempt} failed:`, error);
-        
-        if (attempt < 3) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-        }
-      } catch (err) {
-        console.warn(`⚠️ Delete attempt ${attempt} failed with exception:`, err);
-        deleteError = err;
-        
-        if (attempt < 3) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-        }
-      }
-    }
-
-    if (deleteError) {
+    } catch (deleteError) {
       console.error('❌ Character deletion failed:', deleteError);
       return createErrorResponse(deleteError, 'Database delete');
     }
-
-    console.log('✅ Character deleted successfully');
-    return new Response(JSON.stringify({ 
-      message: 'Personagem excluído com sucesso',
-      success: true,
-      timestamp: new Date().toISOString()
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
   } catch (error) {
     console.error('❌ API Error:', error);
     return createErrorResponse(error, 'API request');

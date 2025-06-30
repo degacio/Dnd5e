@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { supabaseAdmin, executeWithRecovery } from '@/lib/supabaseAdmin';
 
 // Helper function to validate and get user from token
 async function validateUserFromToken(authHeader: string) {
@@ -76,15 +76,53 @@ export async function GET(request: Request) {
 
     console.log('✅ User authenticated successfully:', { userId: user.id, email: user.email });
 
-    // Query characters for the authenticated user using admin client
-    const { data: characters, error } = await supabaseAdmin
-      .from('characters')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    // Query characters for the authenticated user using enhanced recovery
+    const queryOperation = async () => {
+      const { data, error } = await supabaseAdmin
+        .from('characters')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-    if (error) {
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    };
+
+    try {
+      const characters = await executeWithRecovery(queryOperation, 'Characters list query');
+      console.log('✅ Characters fetched successfully:', { count: characters?.length || 0 });
+
+      return new Response(JSON.stringify(characters || []), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
       console.error('Database select error:', error);
+      
+      // Enhanced error response for network issues
+      if (error.message && (
+        error.message.includes('fetch failed') ||
+        error.message.includes('other side closed') ||
+        error.message.includes('Network connection failed') ||
+        error.message.includes('Circuit breaker')
+      )) {
+        return new Response(JSON.stringify({ 
+          error: 'Temporary connection issue',
+          message: 'Experiencing temporary connectivity issues. The system is attempting automatic recovery.',
+          details: error.message,
+          troubleshooting: [
+            'Please wait a few seconds and try again',
+            'The system has automatic recovery for network issues',
+            'Check your internet connection if the problem persists'
+          ]
+        }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
       return new Response(JSON.stringify({ 
         error: 'Database error',
         message: error.message,
@@ -96,12 +134,6 @@ export async function GET(request: Request) {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    console.log('✅ Characters fetched successfully:', { count: characters?.length || 0 });
-
-    return new Response(JSON.stringify(characters || []), {
-      headers: { 'Content-Type': 'application/json' }
-    });
   } catch (error) {
     console.error('💥 API error:', error);
     return new Response(JSON.stringify({ 
@@ -200,15 +232,54 @@ export async function POST(request: Request) {
 
     console.log('📝 Creating character:', { name: characterData.name, class: characterData.class_name });
 
-    // Insert the character using admin client
-    const { data: character, error } = await supabaseAdmin
-      .from('characters')
-      .insert([characterData])
-      .select()
-      .single();
+    // Insert the character using enhanced recovery
+    const insertOperation = async () => {
+      const { data, error } = await supabaseAdmin
+        .from('characters')
+        .insert([characterData])
+        .select()
+        .single();
 
-    if (error) {
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    };
+
+    try {
+      const character = await executeWithRecovery(insertOperation, 'Character creation');
+      console.log('✅ Character created successfully:', { id: character.id, name: character.name });
+
+      return new Response(JSON.stringify(character), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
       console.error('💥 Database insert error:', error);
+      
+      // Enhanced error response for network issues
+      if (error.message && (
+        error.message.includes('fetch failed') ||
+        error.message.includes('other side closed') ||
+        error.message.includes('Network connection failed') ||
+        error.message.includes('Circuit breaker')
+      )) {
+        return new Response(JSON.stringify({ 
+          error: 'Temporary connection issue',
+          message: 'Experiencing temporary connectivity issues while creating character. The system is attempting automatic recovery.',
+          details: error.message,
+          troubleshooting: [
+            'Please wait a few seconds and try again',
+            'The system has automatic recovery for network issues',
+            'Your character data has been preserved and will be saved once connection is restored'
+          ]
+        }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
       return new Response(JSON.stringify({ 
         error: 'Database error',
         message: error.message,
@@ -220,13 +291,6 @@ export async function POST(request: Request) {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    console.log('✅ Character created successfully:', { id: character.id, name: character.name });
-
-    return new Response(JSON.stringify(character), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' }
-    });
   } catch (error) {
     console.error('💥 API error:', error);
     return new Response(JSON.stringify({ 
