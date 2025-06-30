@@ -244,6 +244,11 @@ export async function POST(request: Request) {
         throw error;
       }
 
+      // Critical: Check if data is null even when no error was thrown
+      if (!data) {
+        throw new Error('Insert operation succeeded but returned no data. This may indicate a database configuration issue.');
+      }
+
       return data;
     };
 
