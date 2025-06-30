@@ -60,8 +60,18 @@ export function AuthGuard({ children }: AuthGuardProps) {
       
       if (error) {
         console.error('❌ Error checking auth status:', error);
-        setError(`Authentication error: ${error.message}`);
-        setIsAuthenticated(false);
+        
+        // If we get a refresh token error, sign out to clear stale session data
+        if (error.message?.includes('refresh_token_not_found') || 
+            error.message?.includes('Invalid Refresh Token')) {
+          console.log('🔄 Invalid refresh token detected, signing out...');
+          await supabase.auth.signOut();
+          setIsAuthenticated(false);
+          setError(null);
+        } else {
+          setError(`Authentication error: ${error.message}`);
+          setIsAuthenticated(false);
+        }
       } else {
         const authenticated = !!session;
         console.log('🔍 Auth status check result:', {
@@ -75,8 +85,23 @@ export function AuthGuard({ children }: AuthGuardProps) {
       }
     } catch (error) {
       console.error('💥 Error checking auth status:', error);
-      setError(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setIsAuthenticated(false);
+      
+      // Check if this is a refresh token error in the catch block as well
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (errorMessage.includes('refresh_token_not_found') || 
+          errorMessage.includes('Invalid Refresh Token')) {
+        console.log('🔄 Invalid refresh token detected in catch, signing out...');
+        try {
+          await supabase.auth.signOut();
+        } catch (signOutError) {
+          console.error('Error signing out:', signOutError);
+        }
+        setIsAuthenticated(false);
+        setError(null);
+      } else {
+        setError(`Network error: ${errorMessage}`);
+        setIsAuthenticated(false);
+      }
     } finally {
       setLoading(false);
     }
