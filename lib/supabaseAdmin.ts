@@ -70,14 +70,13 @@ const enhancedFetch = async (url: string, options: RequestInit = {}) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), CONNECTION_TIMEOUT);
       
-      // Enhanced headers with connection management
+      // Enhanced headers with connection management (removed Keep-Alive header)
       const enhancedHeaders = {
         'User-Agent': 'expo-app/1.0.0',
         'Accept': 'application/json',
         'Content-Type': 'application/json',
         'Connection': 'keep-alive',
         'Cache-Control': 'no-cache',
-        'Keep-Alive': 'timeout=30, max=100',
         'apikey': supabaseServiceKey,
         'Authorization': `Bearer ${supabaseServiceKey}`,
         ...options.headers,
