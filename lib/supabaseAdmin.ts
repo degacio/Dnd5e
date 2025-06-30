@@ -39,17 +39,17 @@ console.log('🔧 Supabase URL:', supabaseUrl);
 console.log('🔧 Service key available:', !!supabaseServiceKey);
 console.log('🔧 Service key length:', supabaseServiceKey.length);
 
-// Enhanced fetch function with better error handling and retry logic
+// Enhanced fetch function with exponential backoff and better error handling
 const enhancedFetch = async (url: string, options: RequestInit = {}) => {
-  const maxRetries = 3;
-  const retryDelay = 1000; // 1 second
+  const maxRetries = 5;
+  const baseDelay = 1000; // 1 second base delay
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`🔄 Fetch attempt ${attempt}/${maxRetries} to: ${url}`);
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout
       
       const response = await fetch(url, {
         ...options,
@@ -59,6 +59,7 @@ const enhancedFetch = async (url: string, options: RequestInit = {}) => {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
           'Connection': 'keep-alive',
+          'Cache-Control': 'no-cache',
           'apikey': supabaseServiceKey,
           'Authorization': `Bearer ${supabaseServiceKey}`,
           ...options.headers,
@@ -81,18 +82,61 @@ const enhancedFetch = async (url: string, options: RequestInit = {}) => {
         // Enhance error with more context
         if (error instanceof Error) {
           if (error.name === 'AbortError') {
-            throw new Error(`Connection timeout after 30 seconds. Please check your network connection and Supabase project status.`);
-          } else if (error.message.includes('fetch failed')) {
-            throw new Error(`Network connection failed. This could be due to: 1) Internet connectivity issues, 2) Supabase project is paused/inactive, 3) Firewall blocking the connection, 4) Invalid Supabase URL. Original error: ${error.message}`);
+            throw new Error(`Connection timeout after 45 seconds. Please check your network connection and Supabase project status. This may indicate: 1) Network connectivity issues, 2) Supabase project is paused/inactive, 3) Firewall blocking the connection.`);
+          } else if (error.message.includes('fetch failed') || error.message.includes('other side closed')) {
+            throw new Error(`Network connection failed. This could be due to: 1) Internet connectivity issues, 2) Supabase project is paused/inactive, 3) Firewall blocking the connection, 4) Invalid Supabase URL, 5) DNS resolution issues. Original error: ${error.message}`);
+          } else if (error.message.includes('ECONNREFUSED')) {
+            throw new Error(`Connection refused by server. This usually means: 1) Supabase project is paused or deleted, 2) Invalid Supabase URL, 3) Network firewall blocking connection. Original error: ${error.message}`);
+          } else if (error.message.includes('ENOTFOUND')) {
+            throw new Error(`DNS resolution failed. This usually means: 1) Invalid Supabase URL, 2) Network connectivity issues, 3) DNS server problems. Original error: ${error.message}`);
           }
         }
         throw error;
       }
       
-      // Wait before retrying
-      console.log(`⏳ Waiting ${retryDelay}ms before retry...`);
-      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      // Exponential backoff with jitter
+      const delay = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 1000;
+      console.log(`⏳ Waiting ${Math.round(delay)}ms before retry...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
+  }
+};
+
+// Create a connection pool-like mechanism to reuse connections
+let connectionHealthy = true;
+let lastHealthCheck = 0;
+const HEALTH_CHECK_INTERVAL = 30000; // 30 seconds
+
+const checkConnectionHealth = async () => {
+  const now = Date.now();
+  if (now - lastHealthCheck < HEALTH_CHECK_INTERVAL && connectionHealthy) {
+    return connectionHealthy;
+  }
+  
+  try {
+    const healthCheckUrl = `${supabaseUrl}/rest/v1/`;
+    const response = await fetch(healthCheckUrl, {
+      method: 'HEAD',
+      headers: {
+        'apikey': supabaseServiceKey,
+        'Authorization': `Bearer ${supabaseServiceKey}`,
+      },
+      signal: AbortSignal.timeout(10000), // 10 second timeout for health check
+    });
+    
+    connectionHealthy = response.ok || response.status === 401; // 401 is expected for HEAD requests
+    lastHealthCheck = now;
+    
+    if (!connectionHealthy) {
+      console.warn(`⚠️ Connection health check failed with status: ${response.status}`);
+    }
+    
+    return connectionHealthy;
+  } catch (error) {
+    console.error('❌ Connection health check failed:', error);
+    connectionHealthy = false;
+    lastHealthCheck = now;
+    return false;
   }
 };
 
@@ -129,7 +173,14 @@ export async function testSupabaseAdminConnection() {
     console.log('📡 Target URL:', supabaseUrl);
     console.log('🔑 Service key length:', supabaseServiceKey.length);
     
-    // Test 1: Basic DNS resolution and connectivity
+    // Test 1: Check connection health first
+    console.log('🏥 Checking connection health...');
+    const isHealthy = await checkConnectionHealth();
+    if (!isHealthy) {
+      console.warn('⚠️ Connection health check indicates potential issues');
+    }
+    
+    // Test 2: Basic DNS resolution and connectivity
     console.log('🌐 Testing basic network connectivity...');
     
     try {
@@ -149,36 +200,56 @@ export async function testSupabaseAdminConnection() {
       throw new Error(`Cannot reach Supabase server. ${connectError instanceof Error ? connectError.message : 'Unknown connectivity error'}`);
     }
     
-    // Test 2: Database query
+    // Test 3: Database query with retry logic
     console.log('🗄️ Testing database query...');
-    const { data, error } = await supabaseAdmin
-      .from('characters')
-      .select('count')
-      .limit(1);
+    let queryError = null;
+    let queryData = null;
+    
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const { data, error } = await supabaseAdmin
+          .from('characters')
+          .select('count')
+          .limit(1);
+        
+        queryData = data;
+        queryError = error;
+        break;
+      } catch (err) {
+        console.warn(`⚠️ Database query attempt ${attempt} failed:`, err);
+        queryError = err;
+        
+        if (attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+        }
+      }
+    }
     
     const endTime = Date.now();
     const duration = endTime - startTime;
     
-    if (error) {
+    if (queryError) {
       console.error('❌ Database query failed:', {
-        error: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
+        error: queryError.message,
+        details: queryError.details,
+        hint: queryError.hint,
+        code: queryError.code,
         duration: `${duration}ms`
       });
       
       return {
         success: false,
-        error: error.message,
-        details: error.details,
+        error: queryError.message,
+        details: queryError.details,
         duration,
         timestamp: new Date().toISOString(),
         troubleshooting: [
           'Check if your Supabase project is active (not paused)',
           'Verify SUPABASE_SERVICE_ROLE_KEY has correct permissions',
           'Confirm the characters table exists in your database',
-          'Check Supabase project logs for additional details'
+          'Check Supabase project logs for additional details',
+          'Try restarting your development server',
+          'Check your internet connection stability'
         ]
       };
     } else {
@@ -190,7 +261,8 @@ export async function testSupabaseAdminConnection() {
         duration,
         timestamp: new Date().toISOString(),
         url: supabaseUrl,
-        message: 'Connection successful'
+        message: 'Connection successful',
+        connectionHealthy
       };
     }
   } catch (err) {
@@ -210,20 +282,23 @@ export async function testSupabaseAdminConnection() {
       'Confirm EXPO_PUBLIC_SUPABASE_URL is correct',
       'Confirm SUPABASE_SERVICE_ROLE_KEY is correct',
       'Check firewall/proxy settings',
-      'Try the Tests tab for detailed diagnostics'
+      'Try the Tests tab for detailed diagnostics',
+      'Restart your development server'
     ];
     
     if (err instanceof Error) {
-      if (err.message.includes('fetch failed') || err.message.includes('ENOTFOUND') || err.message.includes('ECONNREFUSED')) {
+      if (err.message.includes('fetch failed') || err.message.includes('ENOTFOUND') || err.message.includes('ECONNREFUSED') || err.message.includes('other side closed')) {
         console.error('🌐 Network connectivity issue detected. Troubleshooting steps:');
         troubleshooting = [
-          'Check your internet connection',
+          'Check your internet connection stability',
           'Verify the Supabase URL is correct and accessible',
           'Check if your Supabase project is paused or deleted',
           'Disable VPN if using one',
           'Check firewall settings',
           'Try accessing your Supabase dashboard in a browser',
-          'Contact your network administrator if on corporate network'
+          'Contact your network administrator if on corporate network',
+          'Try switching to a different network (mobile hotspot)',
+          'Clear DNS cache (ipconfig /flushdns on Windows, sudo dscacheutil -flushcache on Mac)'
         ];
       } else if (err.message.includes('unauthorized') || err.message.includes('401')) {
         console.error('🔐 Authentication issue detected. Troubleshooting steps:');
@@ -239,7 +314,8 @@ export async function testSupabaseAdminConnection() {
           'Check network stability',
           'Try again in a few minutes',
           'Check Supabase status page',
-          'Consider increasing timeout if on slow connection'
+          'Consider increasing timeout if on slow connection',
+          'Try switching to a different network'
         ];
       }
     }
@@ -250,7 +326,8 @@ export async function testSupabaseAdminConnection() {
       duration,
       timestamp: new Date().toISOString(),
       type: 'connection_error',
-      troubleshooting
+      troubleshooting,
+      connectionHealthy: false
     };
   }
 }

@@ -51,11 +51,14 @@ function createErrorResponse(error: any, operation: string) {
     error.message.includes('Failed to fetch') ||
     error.message.includes('NetworkError') ||
     error.message.includes('Connection timeout') ||
-    error.message.includes('Network connection failed')
+    error.message.includes('Network connection failed') ||
+    error.message.includes('other side closed') ||
+    error.message.includes('Connection refused') ||
+    error.message.includes('DNS resolution failed')
   )) {
     return new Response(JSON.stringify({ 
       error: 'Erro de conexão com o banco de dados',
-      message: 'Não foi possível conectar ao banco de dados. Isso pode ser devido a problemas de rede ou configuração.',
+      message: 'Não foi possível conectar ao banco de dados. Verifique sua conexão e tente novamente.',
       type: 'network_error',
       troubleshooting: [
         'Verifique sua conexão com a internet',
@@ -64,7 +67,9 @@ function createErrorResponse(error: any, operation: string) {
         'Desative VPN temporariamente se estiver usando',
         'Verifique configurações de firewall/proxy',
         'Tente acessar o painel do Supabase no navegador',
-        'Use a aba "Testes" para diagnósticos detalhados'
+        'Reinicie o servidor de desenvolvimento',
+        'Use a aba "Testes" para diagnósticos detalhados',
+        'Tente trocar de rede (hotspot móvel) para testar'
       ],
       timestamp: new Date().toISOString(),
       technical_details: error.message
@@ -197,16 +202,34 @@ export async function GET(request: Request, { id }: { id: string }) {
       });
     }
 
-    // Query the specific character
-    const { data: character, error } = await supabaseAdmin
-      .from('characters')
-      .select('*')
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .single();
+    // Query the specific character with retry logic
+    let character = null;
+    let queryError = null;
+    
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const { data, error } = await supabaseAdmin
+          .from('characters')
+          .select('*')
+          .eq('id', id)
+          .eq('user_id', user.id)
+          .single();
+        
+        character = data;
+        queryError = error;
+        break;
+      } catch (err) {
+        console.warn(`⚠️ Character query attempt ${attempt} failed:`, err);
+        queryError = err;
+        
+        if (attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
+      }
+    }
 
-    if (error) {
-      return createErrorResponse(error, 'Database query');
+    if (queryError) {
+      return createErrorResponse(queryError, 'Database query');
     }
 
     if (!character) {
@@ -290,17 +313,35 @@ export async function PUT(request: Request, { id }: { id: string }) {
       updated_at: new Date().toISOString(),
     };
 
-    // Update the character
-    const { data: character, error } = await supabaseAdmin
-      .from('characters')
-      .update(updateData)
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .select()
-      .single();
+    // Update the character with retry logic
+    let character = null;
+    let updateError = null;
+    
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const { data, error } = await supabaseAdmin
+          .from('characters')
+          .update(updateData)
+          .eq('id', id)
+          .eq('user_id', user.id)
+          .select()
+          .single();
+        
+        character = data;
+        updateError = error;
+        break;
+      } catch (err) {
+        console.warn(`⚠️ Character update attempt ${attempt} failed:`, err);
+        updateError = err;
+        
+        if (attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
+      }
+    }
 
-    if (error) {
-      return createErrorResponse(error, 'Database update');
+    if (updateError) {
+      return createErrorResponse(updateError, 'Database update');
     }
 
     if (!character) {
@@ -383,67 +424,97 @@ export async function DELETE(request: Request, { id }: { id: string }) {
 
     console.log('✅ User validated:', user.id);
 
-    // Verify character exists and belongs to user before deletion
+    // Verify character exists and belongs to user before deletion with retry logic
     console.log(`🔍 Verifying character ${id} exists and belongs to user ${user.id}...`);
-    try {
-      const { data: existingCharacter, error: checkError } = await supabaseAdmin
-        .from('characters')
-        .select('id, name')
-        .eq('id', id)
-        .eq('user_id', user.id)
-        .single();
-      
-      if (checkError) {
-        console.error('❌ Character verification failed:', checkError);
-        return createErrorResponse(checkError, 'Character verification');
+    let existingCharacter = null;
+    let verifyError = null;
+    
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const { data, error } = await supabaseAdmin
+          .from('characters')
+          .select('id, name')
+          .eq('id', id)
+          .eq('user_id', user.id)
+          .single();
+        
+        existingCharacter = data;
+        verifyError = error;
+        break;
+      } catch (err) {
+        console.warn(`⚠️ Character verification attempt ${attempt} failed:`, err);
+        verifyError = err;
+        
+        if (attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
       }
-      
-      if (!existingCharacter) {
-        console.error('❌ Character not found or access denied');
-        return new Response(JSON.stringify({ 
-          error: 'Personagem não encontrado',
-          message: 'Personagem não encontrado ou você não tem permissão para excluí-lo.',
-          type: 'not_found',
-          timestamp: new Date().toISOString()
-        }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-      
-      console.log(`✅ Character verified: ${existingCharacter.name}`);
-    } catch (verifyErr) {
-      console.error('❌ Character verification error:', verifyErr);
-      return createErrorResponse(verifyErr, 'Character verification');
     }
-
-    // Perform the deletion with enhanced error handling
-    console.log(`🗑️  Attempting to delete character ${id}...`);
-    try {
-      const { error: deleteError } = await supabaseAdmin
-        .from('characters')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
-
-      if (deleteError) {
-        console.error('❌ Character deletion failed:', deleteError);
-        return createErrorResponse(deleteError, 'Database delete');
-      }
-
-      console.log('✅ Character deleted successfully');
+    
+    if (verifyError) {
+      console.error('❌ Character verification failed:', verifyError);
+      return createErrorResponse(verifyError, 'Character verification');
+    }
+    
+    if (!existingCharacter) {
+      console.error('❌ Character not found or access denied');
       return new Response(JSON.stringify({ 
-        message: 'Personagem excluído com sucesso',
-        success: true,
+        error: 'Personagem não encontrado',
+        message: 'Personagem não encontrado ou você não tem permissão para excluí-lo.',
+        type: 'not_found',
         timestamp: new Date().toISOString()
       }), {
-        status: 200,
+        status: 404,
         headers: { 'Content-Type': 'application/json' }
       });
-    } catch (deleteErr) {
-      console.error('❌ Delete operation error:', deleteErr);
-      return createErrorResponse(deleteErr, 'Database delete operation');
     }
+    
+    console.log(`✅ Character verified: ${existingCharacter.name}`);
+
+    // Perform the deletion with enhanced error handling and retry logic
+    console.log(`🗑️  Attempting to delete character ${id}...`);
+    let deleteError = null;
+    
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const { error } = await supabaseAdmin
+          .from('characters')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', user.id);
+
+        deleteError = error;
+        if (!error) break;
+        
+        console.warn(`⚠️ Delete attempt ${attempt} failed:`, error);
+        
+        if (attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
+      } catch (err) {
+        console.warn(`⚠️ Delete attempt ${attempt} failed with exception:`, err);
+        deleteError = err;
+        
+        if (attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
+      }
+    }
+
+    if (deleteError) {
+      console.error('❌ Character deletion failed:', deleteError);
+      return createErrorResponse(deleteError, 'Database delete');
+    }
+
+    console.log('✅ Character deleted successfully');
+    return new Response(JSON.stringify({ 
+      message: 'Personagem excluído com sucesso',
+      success: true,
+      timestamp: new Date().toISOString()
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error) {
     console.error('❌ API Error:', error);
     return createErrorResponse(error, 'API request');
