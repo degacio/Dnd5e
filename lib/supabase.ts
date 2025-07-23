@@ -4,6 +4,9 @@ import { Database } from '@/types/database';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
+console.log('🔍 Supabase URL:', supabaseUrl);
+console.log('🔍 Supabase Anon Key:', supabaseAnonKey?.substring(0, 10), '...');
+
 // === Validations ===
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables:', {
