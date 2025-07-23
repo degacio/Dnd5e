@@ -83,11 +83,19 @@ export default function CharactersTab() {
   const checkNetworkConnection = async (): Promise<boolean> => {
     try {
       // Try to fetch a simple endpoint to check connectivity
-      const response = await fetch('/api/health', {
-        method: 'GET',
-        timeout: 5000,
-      });
-      return response.ok;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      try {
+        const response = await fetch('/api/health', {
+          method: 'GET',
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        return response.ok;
+      } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
+      }
     } catch (error) {
       console.log('Network check failed:', error);
       return false;
@@ -159,14 +167,16 @@ export default function CharactersTab() {
     } catch (error) {
       console.error('Error loading characters:', error);
       
-      if (error.name === 'AbortError') {
+      if (typeof error === 'object' && error !== null && 'name' in error && (error as any).name === 'AbortError') {
         setNetworkError('Tempo limite excedido. Verifique sua conexão e tente novamente.');
-      } else if (error.message.includes('Network request failed')) {
+      } else if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as any).message === 'string' && (error as any).message.includes('Network request failed')) {
         setNetworkError('Falha na conexão. Verifique se o servidor está rodando e tente novamente.');
-      } else if (error.message.includes('fetch')) {
+      } else if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as any).message === 'string' && (error as any).message.includes('fetch')) {
         setNetworkError('Erro de rede. Verifique sua conexão com a internet.');
+      } else if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as any).message === 'string') {
+        setNetworkError(`Erro ao carregar personagens: ${(error as any).message}`);
       } else {
-        setNetworkError(`Erro ao carregar personagens: ${error.message}`);
+        setNetworkError('Erro ao carregar personagens.');
       }
     }
   };
@@ -215,7 +225,9 @@ export default function CharactersTab() {
   };
 
   const prepareCharacterSpells = (character: Character): CharacterSpells => {
-    const characterClass = classesData.find(cls => cls.name === character.class_name) || null;
+    // Ensure the found class matches the DnDClass type
+    const rawClass = classesData.find(cls => cls.name === character.class_name);
+    const characterClass: DnDClass | null = rawClass ? rawClass as DnDClass : null;
     
     // Get character's known spells
     const knownSpellNames = character.spells_known || [];
@@ -384,7 +396,7 @@ export default function CharactersTab() {
       }
     } catch (error) {
       console.error('Error updating spell slot:', error);
-      if (error.name === 'AbortError') {
+      if (typeof error === 'object' && error !== null && 'name' in error && (error as any).name === 'AbortError') {
         Alert.alert('Erro', 'Tempo limite excedido. Tente novamente.');
       } else {
         Alert.alert('Erro', 'Erro ao atualizar espaços de magia.');
@@ -482,7 +494,7 @@ export default function CharactersTab() {
       }
     } catch (error) {
       console.error('Error adding spells to grimoire:', error);
-      if (error.name === 'AbortError') {
+      if (typeof error === 'object' && error !== null && 'name' in error && (error as any).name === 'AbortError') {
         Alert.alert('Erro', 'Tempo limite excedido. Tente novamente.');
       } else {
         Alert.alert('Erro', 'Erro ao adicionar magias ao grimório.');
@@ -548,7 +560,7 @@ export default function CharactersTab() {
     } catch (error) {
       console.error('Error deleting character:', error);
       
-      if (error.name === 'AbortError') {
+      if (typeof error === 'object' && error !== null && 'name' in error && (error as any).name === 'AbortError') {
         const errorMessage = 'Tempo limite excedido. Tente novamente.';
         if (Platform.OS === 'web') {
           alert(`Erro: ${errorMessage}`);
@@ -644,7 +656,7 @@ export default function CharactersTab() {
       }
     } catch (error) {
       console.error('Error generating token:', error);
-      if (error.name === 'AbortError') {
+      if (typeof error === 'object' && error !== null && 'name' in error && (error as any).name === 'AbortError') {
         throw new Error('Tempo limite excedido. Tente novamente.');
       } else {
         throw new Error('Não foi possível gerar o token');
@@ -710,7 +722,7 @@ export default function CharactersTab() {
       }
     } catch (error) {
       console.error('Error revoking token:', error);
-      if (error.name === 'AbortError') {
+      if (typeof error === 'object' && error !== null && 'name' in error && (error as any).name === 'AbortError') {
         throw new Error('Tempo limite excedido. Tente novamente.');
       } else {
         throw new Error('Não foi possível revogar o token');
@@ -1126,8 +1138,50 @@ export default function CharactersTab() {
             {classesData.map((dndClass) => (
               <ClassCard
                 key={dndClass.id}
-                dndClass={dndClass}
-                onPress={() => handleClassPress(dndClass)}
+                dndClass={{
+                  ...dndClass,
+                  negrito: dndClass.negrito ?? false,
+                  ...(dndClass.spellcasting
+                    ? {
+                        spellcasting: {
+                          ...dndClass.spellcasting,
+                          spellSlots: (() => {
+                            const slots: { [key: string]: number[] } = {};
+                            for (let i = 1; i <= 9; i++) {
+                              const key = i.toString();
+                              const arr = dndClass.spellcasting!.spellSlots[key];
+                              slots[key] = Array.isArray(arr) ? arr : [];
+                            }
+                            return slots;
+                          })(),
+                        },
+                      }
+                    : {}),
+                }}
+                onPress={() => {
+                  let spellcasting = dndClass.spellcasting;
+                  if (spellcasting && spellcasting.spellSlots) {
+                    const filteredSpellSlots: Record<string, number[]> = {};
+                    for (let i = 1; i <= 9; i++) {
+                      const key = i.toString();
+                      const arr = spellcasting.spellSlots[key];
+                      if (Array.isArray(arr)) {
+                        filteredSpellSlots[key] = arr;
+                      }
+                    }
+                    spellcasting = { ...spellcasting, spellSlots: filteredSpellSlots };
+                  }
+                  handleClassPress({
+                    ...dndClass,
+                    ...(spellcasting
+                      ? {
+                          spellcasting: {
+                            ...spellcasting,
+                          },
+                        }
+                      : {}),
+                  });
+                }}
               />
             ))}
           </View>
@@ -1704,3 +1758,8 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 });
+
+export interface Spellcasting {
+  spellSlots: { [key: string]: number[] };
+  // ...outros campos
+}

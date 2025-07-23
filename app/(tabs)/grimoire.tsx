@@ -100,7 +100,9 @@ export function GrimoireTab() {
   };
 
   const prepareCharacterSpells = (character: Character): CharacterSpells => {
-    const characterClass = classesData.find(cls => cls.name === character.class_name) || null;
+    let characterClass = classesData.find(cls => cls.name === character.class_name) || null;
+    // Patch: Ensure characterClass is compatible with DnDClass type
+    // (Removed 'negrito' property assignment as it is not part of DnDClass)
     
     // Get character's known spells
     const knownSpellNames = character.spells_known || [];

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
+  Button,
   StyleSheet, 
   SafeAreaView, 
   ScrollView, 
@@ -27,6 +28,9 @@ import * as DocumentPicker from 'expo-document-picker';
 import { adaptSpellsFromLivroDoJogador } from '@/utils/spellAdapter';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
+import DmView from '../../components/DmView';
+/* import Testes from '../../components/Testes'; */
+// Removed because the module does not exist.
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -38,6 +42,8 @@ export default function SettingsTab() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [dimensions, setDimensions] = useState(Dimensions.get('window'));
   const [serviceKeyConfigured, setServiceKeyConfigured] = useState<boolean | null>(null);
+  const [showDmView, setShowDmView] = React.useState(false);
+  const [showTestes, setShowTestes] = React.useState(false);
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
@@ -59,7 +65,7 @@ export default function SettingsTab() {
       const { data: { user } } = await supabase.auth.getUser();
       console.log('👤 User data received:', user ? `${user.email} (${user.id})` : 'No user');
       if (user) {
-        setUserEmail(user.email);
+        setUserEmail(user.email ?? null);
         console.log('✅ User email set to state:', user.email);
       } else {
         console.log('❌ No user found');
@@ -193,8 +199,7 @@ export default function SettingsTab() {
         console.error('❌ Supabase logout error:', error);
         console.error('❌ Error details:', {
           message: error.message,
-          status: error.status,
-          statusCode: error.statusCode
+          status: error.status
         });
         
         if (Platform.OS === 'web') {
@@ -245,12 +250,15 @@ export default function SettingsTab() {
       
     } catch (error) {
       console.error('💥 Logout error:', error);
-      console.error('💥 Error stack:', error.stack);
+      if (error instanceof Error) {
+        console.error('💥 Error stack:', error.stack);
+      }
       
       if (Platform.OS === 'web') {
-        alert(`Erro: Erro inesperado ao sair da conta: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        alert(`Erro: Erro inesperado ao sair da conta: ${errorMessage}`);
       } else {
-        Alert.alert('Erro', `Erro inesperado ao sair da conta: ${error.message}`);
+        Alert.alert('Erro', `Erro inesperado ao sair da conta: ${error instanceof Error ? error.message : String(error)}`);
       }
     } finally {
       console.log('🔄 Setting isLoggingOut to false');
@@ -649,6 +657,26 @@ export default function SettingsTab() {
               </Text>
             </View>
           </View>
+        </View>
+
+        {/* Seção de Ferramentas Avançadas */}
+        <View style={{ marginVertical: 24 }}>
+          <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 12 }}>Ferramentas Avançadas</Text>
+          <TouchableOpacity
+            style={{ marginBottom: 10, padding: 10, backgroundColor: '#eee', borderRadius: 8 }}
+            onPress={() => setShowDmView((v) => !v)}
+          >
+            <Text style={{ fontSize: 16 }}>Visão DM</Text>
+          </TouchableOpacity>
+          {showDmView && <DmView />}
+          {/* <TouchableOpacity
+            style={{ marginBottom: 10, padding: 10, backgroundColor: '#eee', borderRadius: 8 }}
+            onPress={() => setShowTestes((v) => !v)}
+          >
+            <Text style={{ fontSize: 16 }}>Testes</Text>
+          </TouchableOpacity>
+          {showTestes && <Testes />} */}
+          {/* {showTestes && <Testes />} */}
         </View>
       </ScrollView>
 
