@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Spell, SchoolColors } from '@/types/spell';
-import { Sparkles, ChevronRight } from 'lucide-react-native';
+import { Sparkles, Clock, Target, Zap, Timer } from 'lucide-react-native';
 
 interface SpellCardProps {
   spell: Spell;
@@ -13,42 +13,53 @@ export function SpellCard({ spell, onPress }: SpellCardProps) {
 
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
-      <View style={[styles.content, { borderLeftColor: schoolColor }]}>
-        <View style={styles.header}>
-          <View style={styles.titleRow}>
-            <View style={[styles.levelIndicator, { backgroundColor: schoolColor }]}>
-              <Text style={styles.levelText}>{spell.level}º</Text>
-            </View>
-            <View style={styles.nameContainer}>
-              <Text style={styles.spellName}>{spell.name}</Text>
-              <Text style={styles.schoolText}>{spell.school}</Text>
-            </View>
+      <View style={[styles.header, { backgroundColor: schoolColor }]}>
+        <View style={styles.titleRow}>
+          <Sparkles size={20} color="#FFFFFF" />
+          <Text style={styles.spellName}>{spell.name}</Text>
+          <View style={styles.levelBadge}>
+            <Text style={styles.levelText}>{spell.level}º</Text>
           </View>
-          <ChevronRight size={18} color="#999" />
         </View>
+        <Text style={styles.schoolText}>{spell.school}</Text>
+      </View>
 
-        <View style={styles.divider} />
-
-        <View style={styles.infoSection}>
-          <View style={styles.infoRow}>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Tempo:</Text>
-              <Text style={styles.infoValue}>{spell.castingTime}</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Alcance:</Text>
-              <Text style={styles.infoValue}>{spell.range}</Text>
-            </View>
+      <View style={styles.content}>
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Clock size={16} color="#666" />
+            <Text style={styles.statLabel}>Tempo</Text>
+            <Text style={styles.statValue}>{spell.castingTime}</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Target size={16} color="#666" />
+            <Text style={styles.statLabel}>Alcance</Text>
+            <Text style={styles.statValue}>{spell.range}</Text>
           </View>
         </View>
 
-        <View style={styles.divider} />
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Zap size={16} color="#666" />
+            <Text style={styles.statLabel}>Componentes</Text>
+            <Text style={styles.statValue}>{spell.components}</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Timer size={16} color="#666" />
+            <Text style={styles.statLabel}>Duração</Text>
+            <Text style={styles.statValue}>{spell.duration}</Text>
+          </View>
+        </View>
+
+        <Text style={styles.description} numberOfLines={3}>
+          {spell.description}
+        </Text>
 
         <View style={styles.footer}>
-          <Text style={styles.classesLabel}>Classes:</Text>
-          <Text style={styles.classes} numberOfLines={2}>
-            {spell.classes.join(', ')}
+          <Text style={styles.classes}>
+            Classes: {spell.classes.join(', ')}
           </Text>
+          <Text style={styles.source}>{spell.source}</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -57,16 +68,10 @@ export function SpellCard({ spell, onPress }: SpellCardProps) {
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 6,
-    marginHorizontal: 12,
-  },
-  content: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 5,
-    borderWidth: 1,
-    borderColor: '#E8E8E8',
+    marginVertical: 6,
+    marginHorizontal: 16,
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -74,87 +79,80 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    padding: 16,
   },
   titleRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  spellName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginLeft: 8,
     flex: 1,
   },
-  levelIndicator: {
-    borderRadius: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginRight: 12,
-    minWidth: 36,
-    alignItems: 'center',
+  levelBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   levelText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#FFFFFF',
   },
-  nameContainer: {
-    flex: 1,
-  },
-  spellName: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 2,
-    lineHeight: 22,
-  },
   schoolText: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
     fontWeight: '500',
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#F0F0F0',
-    marginVertical: 12,
+  content: {
+    padding: 16,
   },
-  infoSection: {
-    gap: 8,
-  },
-  infoRow: {
+  statsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 16,
+    marginBottom: 12,
   },
-  infoItem: {
+  statItem: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
   },
-  infoLabel: {
+  statLabel: {
     fontSize: 12,
-    color: '#888',
-    fontWeight: '600',
-    marginRight: 6,
-    minWidth: 70,
+    color: '#666',
+    marginTop: 4,
+    marginBottom: 2,
   },
-  infoValue: {
-    fontSize: 12,
+  statValue: {
+    fontSize: 11,
     color: '#333',
+    textAlign: 'center',
     fontWeight: '500',
-    flex: 1,
+  },
+  description: {
+    fontSize: 14,
+    color: '#444',
+    lineHeight: 20,
+    marginBottom: 12,
   },
   footer: {
-    flexDirection: 'column',
-    gap: 4,
-  },
-  classesLabel: {
-    fontSize: 12,
-    color: '#888',
-    fontWeight: '600',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5E5',
+    paddingTop: 12,
   },
   classes: {
     fontSize: 12,
-    color: '#555',
-    fontWeight: '500',
-    lineHeight: 16,
+    color: '#666',
+    marginBottom: 4,
+  },
+  source: {
+    fontSize: 11,
+    color: '#999',
+    fontStyle: 'italic',
   },
 });

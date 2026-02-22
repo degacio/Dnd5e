@@ -3,8 +3,6 @@ import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import { SpellList } from '@/components/SpellList';
 import { Spell } from '@/types/spell';
 import { Sparkles } from 'lucide-react-native';
-import { adaptSpellsFromLivroDoJogador } from '@/utils/spellAdapter';
-import { Platform } from 'react-native';
 
 export default function SpellsTab() {
   const [spells, setSpells] = useState<Spell[]>([]);
@@ -16,58 +14,10 @@ export default function SpellsTab() {
 
   const loadSpells = async () => {
     try {
-      // First try to load custom spells if available
-      let customSpells: Spell[] | null = null;
-      
-      if (Platform.OS === 'web') {
-        const storedSpells = localStorage.getItem('customSpells');
-        if (storedSpells) {
-          customSpells = JSON.parse(storedSpells);
-        }
-      } else {
-        // For native platforms, you would use AsyncStorage
-        // const storedSpells = await AsyncStorage.getItem('customSpells');
-        // if (storedSpells) {
-        //   customSpells = JSON.parse(storedSpells);
-        // }
-      }
-      
-      if (customSpells && customSpells.length > 0) {
-        setSpells(customSpells);
-      } else {
-        // If no custom spells, load the default ones
-        const defaultSpells = require('@/data/spells.json');
-        
-        // Check if we have the Livro do Jogador data
-        try {
-          const livroDoJogadorData = require('@/data/magias-livro-do-jogador.json');
-          const adaptedSpells = adaptSpellsFromLivroDoJogador(livroDoJogadorData);
-          
-          if (adaptedSpells && adaptedSpells.length > 0) {
-            // Combine default spells with adapted ones, avoiding duplicates
-            const combinedSpells = [...defaultSpells];
-            
-            adaptedSpells.forEach(spell => {
-              // Check if spell already exists by ID
-              const existingIndex = combinedSpells.findIndex(s => s.id === spell.id);
-              if (existingIndex === -1) {
-                combinedSpells.push(spell);
-              }
-            });
-            
-            setSpells(combinedSpells);
-          } else {
-            setSpells(defaultSpells);
-          }
-        } catch (error) {
-          console.log('Livro do Jogador data not available, using default spells');
-          setSpells(defaultSpells);
-        }
-      }
+      const spellsData = require('@/data/spells.json');
+      setSpells(spellsData);
     } catch (error) {
       console.error('Erro ao carregar magias:', error);
-      // Fallback to empty array if everything fails
-      setSpells([]);
     } finally {
       setLoading(false);
     }
@@ -93,7 +43,6 @@ export default function SpellsTab() {
           Dungeons & Dragons 5ª Edição
         </Text>
       </View>
-      
       <SpellList spells={spells} />
     </SafeAreaView>
   );
