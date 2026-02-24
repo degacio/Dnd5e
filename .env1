@@ -1,0 +1,10 @@
+# Supabase Configuration
+EXPO_PUBLIC_SUPABASE_URL=https://lptcjeukdemecjuvglpe.supabase.co/
+EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwdGNqZXVrZGVtZWNqdXZnbHBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NzIzODgsImV4cCI6MjA4NzQ0ODM4OH0.q1SMKfGPQa18xLRV2rBH50elRFgLDVMGdhaNqK4a3WQ
+
+# Server-side only (for API routes) - REQUIRED for character operations
+# This MUST be your actual service_role key from Supabase dashboard, not the anon key
+# Go to: Supabase Dashboard -> Project Settings -> API -> service_role key
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwdGNqZXVrZGVtZWNqdXZnbHBlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTg3MjM4OCwiZXhwIjoyMDg3NDQ4Mzg4fQ.cZ5-qt12HX_B1OI0k7Bg53oSVbMejLith6nXD-4iQ5g
+
+SUPABASE_JWT_SECRET=p0/TIJE+xsJTRSbqXSGqUvVMjyuSRSg9IeeZdItLVDqGTYcohxC9lbeAKz4PwSa5KuIOFbBSSACnfVKZ5ZRfOg==
